@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeCoy Racing Hub — #212 Trophy Truck Spec</title>
+<meta name="description" content="PeCoy Racing team hub — 2026 SCORE World Desert Championship. Pit strategy, fuel calculator, GPS files, team chat, live streams.">
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <img src="assets/logo.png" alt="PeCoy Racing — Travis PeCoy / Tyler Brown" class="logo">
+  <div class="header-sub">
+    <span class="truck-badge">#212</span>
+    <span>Trophy Truck Spec &middot; 2026 SCORE World Desert Championship</span>
+  </div>
+</header>
+
+<nav class="tab-bar" id="tabBar">
+  <button class="tab active" data-tab="home">Home</button>
+  <button class="tab" data-tab="live">Live</button>
+  <button class="tab" data-tab="pits">Pit Strategy</button>
+  <button class="tab" data-tab="fuel">Fuel Calc</button>
+  <button class="tab" data-tab="gps">GPS Files</button>
+  <button class="tab" data-tab="chat">Team Chat</button>
+  <button class="tab" data-tab="season">Season</button>
+  <button class="tab" data-tab="hotels">Hotels</button>
+</nav>
+
+<main>
+
+<!-- ============ HOME ============ -->
+<section class="panel active" id="tab-home">
+  <div class="card countdown-card">
+    <div class="card-label">Next Race</div>
+    <h2 class="race-title" id="nextRaceName">7th SCORE Baja 400</h2>
+    <div class="race-loc" id="nextRaceLoc">Ensenada, Baja California &middot; September 9&ndash;13, 2026</div>
+    <div class="countdown" id="countdown">
+      <div class="cd-unit"><span id="cdDays">--</span><label>days</label></div>
+      <div class="cd-unit"><span id="cdHours">--</span><label>hrs</label></div>
+      <div class="cd-unit"><span id="cdMins">--</span><label>min</label></div>
+      <div class="cd-unit"><span id="cdSecs">--</span><label>sec</label></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label">Last Result</div>
+      <div class="big-result"><span class="pos-badge">P4</span> Baja 500</div>
+      <p class="muted">Travis Pecoy &middot; #212 &middot; 10:55:49.802<br>Trophy Truck Spec &middot; June 2026, Ensenada</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Season So Far</div>
+      <table class="mini-table">
+        <tr><td>San Felipe 250</td><td class="right"><span class="pos-chip">P6</span></td></tr>
+        <tr><td>Baja 500</td><td class="right"><span class="pos-chip">P4</span></td></tr>
+        <tr><td>Baja 400</td><td class="right muted">Sep 9&ndash;13</td></tr>
+        <tr><td>Baja 1000</td><td class="right muted">Nov 9&ndash;15</td></tr>
+        <tr><td><strong>Championship</strong></td><td class="right"><span class="pos-chip">P5</span> <strong>234 pts</strong> <span class="muted">(&minus;10)</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Quick Links</div>
+    <div class="link-row">
+      <a class="btn" href="https://www.youtube.com/@pecoyracing6134/streams" target="_blank" rel="noopener">&#9654; Truck Live Stream</a>
+      <a class="btn" href="https://www.score-international.com/" target="_blank" rel="noopener">SCORE Live Coverage</a>
+      <a class="btn btn-ghost" href="https://score-raceinfo.com/" target="_blank" rel="noopener">SCORE Race Info</a>
+      <a class="btn btn-ghost" href="https://results.score-international.com/results/" target="_blank" rel="noopener">Official Results</a>
+    </div>
+  </div>
+
+  <div class="card" id="teamNoticeCard">
+    <div class="card-label">Team Notice Board</div>
+    <div id="noticeBoard" class="muted">Loading&hellip;</div>
+    <div class="inline-form" id="noticeForm">
+      <input type="text" id="noticeInput" placeholder="Post a notice for the team (schedules, meet times, etc.)">
+      <button class="btn" id="noticePost">Post</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIVE ============ -->
+<section class="panel" id="tab-live">
+  <div class="card">
+    <div class="card-label">PeCoy Racing &mdash; Truck Live Stream</div>
+    <div class="video-wrap">
+      <iframe id="ytEmbed" src="https://www.youtube.com/embed/live_stream?channel=UCnRQDUVEqVZqp6DfS15OvUA" title="PeCoy Racing live stream" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    <p class="muted">If the embed shows unavailable, the truck isn't live yet &mdash; open the channel directly:</p>
+    <a class="btn" href="https://www.youtube.com/@pecoyracing6134/streams" target="_blank" rel="noopener">&#9654; Open @pecoyracing6134 Live Streams</a>
+  </div>
+  <div class="card">
+    <div class="card-label">SCORE International Coverage</div>
+    <div class="link-row">
+      <a class="btn" href="https://www.score-international.com/" target="_blank" rel="noopener">SCORE Live (score-international.com)</a>
+      <a class="btn btn-ghost" href="https://www.youtube.com/@SCOREInternational" target="_blank" rel="noopener">SCORE YouTube Channel</a>
+      <a class="btn btn-ghost" href="https://results.score-international.com/results/" target="_blank" rel="noopener">Live Timing &amp; Results</a>
+    </div>
+    <p class="muted">Race-day tracking links (RaceWeather/tracking pages) get posted on the notice board when SCORE publishes them.</p>
+  </div>
+</section>
+
+<!-- ============ PIT STRATEGY ============ -->
+<section class="panel" id="tab-pits">
+  <div class="card">
+    <div class="section-head">
+      <div class="card-label">Pit Strategy</div>
+      <select id="pitRaceSelect" class="race-select">
+        <option value="baja400">Baja 400 &mdash; Sep 2026</option>
+        <option value="baja1000">Baja 1000 &mdash; Nov 2026</option>
+      </select>
+    </div>
+    <div id="pitSyncNote" class="sync-note"></div>
+    <div class="table-scroll">
+      <table class="data-table" id="pitTable">
+        <thead>
+          <tr><th>Pit</th><th>Race Mile</th><th>Fuel (gal)</th><th>Crew / Chase</th><th>Notes</th><th></th></tr>
+        </thead>
+        <tbody id="pitTableBody"></tbody>
+      </table>
+    </div>
+    <div class="link-row">
+      <button class="btn" id="pitAddRow">+ Add Pit</button>
+      <button class="btn btn-ghost" id="pitSave">Save Plan</button>
+    </div>
+    <p class="muted">Everyone on the team sees the same plan once saved. Fuel cell: <strong>89 usable gallons</strong>.</p>
+  </div>
+</section>
+
+<!-- ============ FUEL CALC ============ -->
+<section class="panel" id="tab-fuel">
+  <div class="card">
+    <div class="section-head">
+      <div class="card-label">Fuel Economy Calculator</div>
+      <select id="fuelRaceSelect" class="race-select">
+        <option value="baja400">Baja 400</option>
+        <option value="baja1000">Baja 1000</option>
+        <option value="practice">Practice / Test</option>
+      </select>
+    </div>
+    <p class="muted">Log each pit: <strong>race mile</strong> + <strong>gallons the truck took</strong>. Assumes fill-to-full every stop &mdash; gallons taken = gallons burned since the last fill. Cell holds <strong>89 usable gallons</strong>, full at the start line (mile 0).</p>
+    <div id="fuelSyncNote" class="sync-note"></div>
+
+    <div class="fuel-entry">
+      <div class="field"><label>Race mile at pit</label><input type="number" id="fuelMile" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 118"></div>
+      <div class="field"><label>Gallons taken</label><input type="number" id="fuelGallons" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 32.5"></div>
+      <div class="field grow"><label>Note (optional)</label><input type="text" id="fuelNote" placeholder="BFG Pit 1, driver swap, etc."></div>
+      <button class="btn" id="fuelAdd">Log Pit</button>
+    </div>
+
+    <div class="stat-row" id="fuelStats">
+      <div class="stat"><span class="stat-val" id="statAvgMpg">&ndash;</span><label>avg mi/gal</label></div>
+      <div class="stat"><span class="stat-val" id="statLastMpg">&ndash;</span><label>last leg mi/gal</label></div>
+      <div class="stat"><span class="stat-val" id="statRange">&ndash;</span><label>full-cell range (mi)</label></div>
+      <div class="stat"><span class="stat-val" id="statTotal">&ndash;</span><label>total gal added</label></div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="data-table" id="fuelTable">
+        <thead><tr><th>#</th><th>Mile</th><th>Leg (mi)</th><th>Gal</th><th>mi/gal</th><th>Note</th><th></th></tr></thead>
+        <tbody id="fuelTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Fuel On Board Right Now</div>
+    <div class="fuel-entry">
+      <div class="field"><label>Truck's current race mile</label><input type="number" id="fobMile" inputmode="decimal" min="0" step="1" placeholder="e.g. 165"></div>
+      <div class="field"><label>Assumed mi/gal</label><input type="number" id="fobMpg" inputmode="decimal" min="0.5" step="0.1" placeholder="auto from log"></div>
+    </div>
+    <div class="fob-readout" id="fobReadout">
+      <div class="fuel-gauge"><div class="fuel-gauge-fill" id="fobGaugeFill" style="width:100%"></div></div>
+      <div class="fob-text" id="fobText">Enter the truck's current mile to estimate fuel on board.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GPS FILES ============ -->
+<section class="panel" id="tab-gps">
+  <div class="card">
+    <div class="card-label">GPS / Course Files</div>
+    <div id="gpsList" class="gps-list"><p class="muted">Loading file list&hellip;</p></div>
+    <p class="muted" id="gpsHowTo">To add files: drop <code>.gpx</code>/<code>.kml</code> files into the site's <code>gps/</code> folder, list them in <code>gps/manifest.json</code>, and redeploy. Course files usually come from SCORE about a week before each race.</p>
+  </div>
+</section>
+
+<!-- ============ CHAT ============ -->
+<section class="panel" id="tab-chat">
+  <div class="card chat-card">
+    <div class="section-head">
+      <div class="card-label">Team Chat</div>
+      <button class="btn btn-ghost btn-small" id="chatChangeName">Change name</button>
+    </div>
+    <div id="chatSyncNote" class="sync-note"></div>
+    <div class="chat-window" id="chatWindow"></div>
+    <div class="inline-form">
+      <input type="text" id="chatInput" placeholder="Message the team&hellip;" maxlength="600" autocomplete="off">
+      <button class="btn" id="chatSend">Send</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEASON ============ -->
+<section class="panel" id="tab-season">
+  <div class="card">
+    <div class="card-label">2026 SCORE World Desert Championship</div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Round</th><th>Race</th><th>Dates</th><th>Location</th><th>#212 Result</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>King Shocks 39th San Felipe 250</td><td>Mar 25&ndash;29</td><td>San Felipe, BC</td><td><span class="pos-chip">P6</span></td></tr>
+          <tr><td>2</td><td>BFGoodrich 58th Baja 500</td><td>Jun 3&ndash;7</td><td>Ensenada, BC</td><td><span class="pos-chip">P4</span></td></tr>
+          <tr class="upcoming"><td>3</td><td>7th SCORE Baja 400</td><td>Sep 9&ndash;13</td><td>Ensenada, BC</td><td class="muted">upcoming</td></tr>
+          <tr class="upcoming"><td>4</td><td>BFGoodrich 59th Baja 1000</td><td>Nov 9&ndash;15</td><td>Los Cabos, BCS</td><td class="muted">upcoming</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">The 59th Baja 1000 starts <em>and</em> finishes in Los Cabos &mdash; first time in event history it runs entirely in Baja California Sur.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-head">
+      <div class="card-label">Trophy Truck Spec &mdash; Points Standings</div>
+      <button class="btn btn-ghost btn-small" id="standingsEdit">Edit</button>
+    </div>
+    <div class="banner" id="standingsBanner"><strong>#212 P5 in points &mdash; 234 pts, 10 back of the lead.</strong> Official SCORE points through Round 2 of 4 (Baja 500).</div>
+    <div class="table-scroll">
+      <table class="data-table" id="standingsTable">
+        <thead><tr><th>Pos</th><th>Truck</th><th>Driver</th><th>Points</th></tr></thead>
+        <tbody id="standingsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Race Results &mdash; Trophy Truck Spec</div>
+    <div class="result-tabs">
+      <button class="rtab active" data-race="sf250">San Felipe 250</button>
+      <button class="rtab" data-race="b500">Baja 500</button>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table" id="resultsTable">
+        <thead><tr><th>Pos</th><th>Truck</th><th>Driver</th><th>Time</th></tr></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="resultsFootnote">Positions per official SCORE results (penalties applied by SCORE; listed order may differ from raw elapsed times).</p>
+  </div>
+</section>
+
+<!-- ============ HOTELS ============ -->
+<section class="panel" id="tab-hotels">
+  <div class="card">
+    <div class="section-head">
+      <div class="card-label">Hotel &amp; Logistics</div>
+      <select id="hotelRaceSelect" class="race-select">
+        <option value="baja400">Baja 400 &mdash; Ensenada</option>
+        <option value="baja1000">Baja 1000 &mdash; Los Cabos</option>
+      </select>
+    </div>
+    <div id="hotelSyncNote" class="sync-note"></div>
+    <div id="hotelList"></div>
+    <details class="add-hotel" id="hotelFormWrap">
+      <summary class="btn btn-ghost">+ Add hotel / lodging info</summary>
+      <div class="hotel-form">
+        <div class="field"><label>Hotel name</label><input type="text" id="hName" placeholder="Hotel Coral &amp; Marina"></div>
+        <div class="field"><label>Address / area</label><input type="text" id="hAddress" placeholder="Zona Playitas, Ensenada"></div>
+        <div class="field"><label>Check-in &ndash; check-out</label><input type="text" id="hDates" placeholder="Sep 8 &ndash; Sep 14"></div>
+        <div class="field"><label>Confirmation #</label><input type="text" id="hConf" placeholder="ABC12345"></div>
+        <div class="field"><label>Who's staying</label><input type="text" id="hWho" placeholder="Travis, Tyler, chase 1 crew"></div>
+        <div class="field"><label>Notes</label><input type="text" id="hNotes" placeholder="2 rooms, parking for chase truck"></div>
+        <button class="btn" id="hotelAdd">Save Hotel</button>
+      </div>
+    </details>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <span>PeCoy Racing &middot; #212 Trophy Truck Spec &middot; Travis PeCoy / Tyler Brown</span>
+  <span class="muted" id="connStatus"></span>
+</footer>
+
+<!-- Firebase (compat builds — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
