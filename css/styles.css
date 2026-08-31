@@ -198,6 +198,15 @@ input::placeholder { color: var(--gray-dark); }
 .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--volt); display: block; font-variant-numeric: tabular-nums; }
 .stat label { color: var(--gray); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
 
+.projection {
+  background: rgba(205, 234, 29, 0.06); border-left: 3px solid var(--volt);
+  border-radius: 0 8px 8px 0; padding: 11px 14px; margin: 12px 0;
+  font-size: 0.92rem; line-height: 1.55;
+}
+.projection:empty { display: none; }
+.projection strong { color: var(--volt); }
+.projection .muted { font-size: 0.85rem; }
+
 .fuel-gauge {
   height: 22px; background: var(--navy-800);
   border: 1px solid var(--navy-700); border-radius: 999px;
@@ -211,6 +220,19 @@ input::placeholder { color: var(--gray-dark); }
 .fob-text { font-size: 1.05rem; line-height: 1.5; }
 .fob-text strong { color: var(--volt); }
 .fob-text.warn strong { color: var(--red); }
+
+/* ---------- course map ---------- */
+.map-link { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--navy-700); }
+.map-link:hover { border-color: var(--volt-dim); }
+.course-map { display: block; width: 100%; height: auto; }
+.facts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+@media (max-width: 560px) { .facts-grid { grid-template-columns: repeat(2, 1fr); } }
+.fact {
+  background: var(--navy-800); border: 1px solid var(--navy-700);
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.fact-val { font-size: 1.35rem; font-weight: 800; color: var(--volt); display: block; font-variant-numeric: tabular-nums; }
+.fact label { color: var(--gray); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; }
 
 /* ---------- gps ---------- */
 .gps-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }

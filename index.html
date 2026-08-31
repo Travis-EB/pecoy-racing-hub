@@ -36,7 +36,8 @@
   <div class="card countdown-card">
     <div class="card-label">Next Race</div>
     <h2 class="race-title" id="nextRaceName">7th SCORE Baja 400</h2>
-    <div class="race-loc" id="nextRaceLoc">Ensenada, Baja California &middot; September 9&ndash;13, 2026</div>
+    <div class="race-loc" id="nextRaceLoc">Ensenada, Baja California &middot; September 9&ndash;13, 2026<br>
+      <span class="muted">Single loop &middot; 423.16 mi &middot; 16-hour limit &middot; 4-wheel green flag Sat Sep 12, 10:00 AM</span></div>
     <div class="countdown" id="countdown">
       <div class="cd-unit"><span id="cdDays">--</span><label>days</label></div>
       <div class="cd-unit"><span id="cdHours">--</span><label>hrs</label></div>
@@ -159,6 +160,8 @@
       <div class="stat"><span class="stat-val" id="statTotal">&ndash;</span><label>total gal added</label></div>
     </div>
 
+    <div class="projection" id="fuelProjection"></div>
+
     <div class="table-scroll">
       <table class="data-table" id="fuelTable">
         <thead><tr><th>#</th><th>Mile</th><th>Leg (mi)</th><th>Gal</th><th>mi/gal</th><th>Note</th><th></th></tr></thead>
@@ -182,6 +185,21 @@
 
 <!-- ============ GPS FILES ============ -->
 <section class="panel" id="tab-gps">
+  <div class="card">
+    <div class="card-label">Baja 400 &mdash; Course Map</div>
+    <a href="assets/baja400-course-map.jpg" target="_blank" rel="noopener" class="map-link">
+      <img src="assets/baja400-course-map.jpg" alt="2026 SCORE Baja 400 official course map — single loop from Ensenada" class="course-map">
+    </a>
+    <p class="muted">Tap the map to open it full size. Single loop out of Ensenada &mdash; race miles marked every 20.</p>
+    <div class="facts-grid">
+      <div class="fact"><span class="fact-val">423.16</span><label>pro class miles</label></div>
+      <div class="fact"><span class="fact-val">16</span><label>hour time limit</label></div>
+      <div class="fact"><span class="fact-val">10:00a</span><label>4-wheel start</label></div>
+      <div class="fact"><span class="fact-val">~118</span><label>gal needed est.</label></div>
+    </div>
+    <p class="muted"><strong>Pre-run rules:</strong> opens Aug 29. Course pre-run RM 40.13&ndash;399.99, <strong>no inbound pre-run at any time</strong>. Outbound-only Sept 11, 7am&ndash;5pm (RM 0.38&ndash;40.13); inbound-only Sept 11, 7am&ndash;5pm (RM 399.99&ndash;411.15, VCP 17&ndash;349). <strong>30 mph limit</strong> one mile before and after any town or highway crossing. Sportsman classes run 370.40 mi via the shortcut.</p>
+  </div>
+
   <div class="card">
     <div class="card-label">GPS / Course Files</div>
     <div id="gpsList" class="gps-list"><p class="muted">Loading file list&hellip;</p></div>

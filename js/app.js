@@ -89,8 +89,11 @@ var DEFAULT_STANDINGS = [
   ["248", "Miles Wyatt", 35]
 ].map(function (d, i) { return { pos: i + 1, truck: d[0], driver: d[1], points: d[2] }; });
 
-// Green flag ~6:00 AM PT on race Saturday of Baja 400 week (Sep 12, 2026).
-var NEXT_RACE_TS = new Date("2026-09-12T06:00:00-07:00").getTime();
+// 4-wheel green flag: Sat Sep 12, 2026, 10:00 AM PT (per official course map).
+var NEXT_RACE_TS = new Date("2026-09-12T10:00:00-07:00").getTime();
+
+// Official course distances (pro classes), used for fuel projections.
+var RACE_DISTANCE = { baja400: 423.16, baja1000: null, practice: null };
 
 /* ---------------- tiny helpers ---------------- */
 
@@ -438,7 +441,28 @@ function renderFuel() {
       Store.deleteItem(fuelListName(), btn.dataset.fdel);
     });
   });
+  renderProjection(s);
   renderFob();
+}
+
+// Race-distance projection: what the whole race costs at the pace we're seeing.
+function renderProjection(s) {
+  var el = $("fuelProjection");
+  var dist = RACE_DISTANCE[fuelRace];
+  if (!dist) { el.innerHTML = ""; return; }
+  if (!isFinite(s.avgMpg) || s.avgMpg <= 0) {
+    el.innerHTML = "<strong>" + dist + " mi</strong> race distance. Log a pit to project total fuel needed.";
+    return;
+  }
+  var needed = dist / s.avgMpg;
+  var fills = Math.max(0, Math.ceil((needed - FUEL_CELL_GALLONS) / FUEL_CELL_GALLONS));
+  var remaining = Math.max(0, dist - s.totalMiles);
+  var remainingGal = remaining / s.avgMpg;
+  el.innerHTML = "At <strong>" + fmt(s.avgMpg) + " mi/gal</strong>, the full <strong>" + dist +
+    " mi</strong> needs about <strong>" + fmt(needed, 1) + " gal</strong> — " +
+    "a full 89-gal cell plus <strong>" + fmt(needed - FUEL_CELL_GALLONS, 1) + " gal</strong> " +
+    "(minimum <strong>" + fills + "</strong> refuel" + (fills === 1 ? "" : "s") + ").<br>" +
+    "<span class=\"muted\">" + fmt(remaining, 0) + " mi still to run ≈ " + fmt(remainingGal, 1) + " gal.</span>";
 }
 
 $("fuelAdd").addEventListener("click", function () {
