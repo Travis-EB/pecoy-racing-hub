@@ -215,14 +215,16 @@ input::placeholder { color: var(--gray-dark); }
 /* ---------- gps ---------- */
 .gps-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .gps-item {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: flex-start; gap: 12px;
   background: var(--navy-800); border: 1px solid var(--navy-700);
-  border-radius: 10px; padding: 12px 14px; text-decoration: none; color: var(--white);
+  border-radius: 10px; padding: 14px; text-decoration: none; color: var(--white);
 }
-.gps-item:hover { border-color: var(--volt-dim); }
-.gps-icon { font-size: 1.3rem; }
-.gps-meta { color: var(--gray); font-size: 0.8rem; }
-.gps-name { font-weight: 700; }
+.gps-item:hover { border-color: var(--volt-dim); background: #17293f; }
+.gps-icon { font-size: 1.5rem; line-height: 1.2; flex: 0 0 auto; }
+.gps-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gps-name { font-weight: 700; font-size: 1rem; }
+.gps-desc { color: var(--white); font-size: 0.85rem; line-height: 1.4; opacity: 0.85; }
+.gps-meta { color: var(--gray-dark); font-size: 0.75rem; }
 
 /* ---------- chat ---------- */
 .chat-card { display: flex; flex-direction: column; }

@@ -511,11 +511,19 @@ fetch("gps/manifest.json")
       $("gpsList").innerHTML = '<p class="muted">No course files posted yet. GPS files for the Baja 400 will show up here once SCORE releases the course.</p>';
       return;
     }
+    var ICONS = { kml: "🛰️", kmz: "🛰️", gpx: "🛰️", pdf: "🗺️" };
     $("gpsList").innerHTML = files.map(function (f) {
-      return '<a class="gps-item" href="gps/' + esc(f.file) + '" download>' +
-        '<span class="gps-icon">🛰️</span><span><span class="gps-name">' + esc(f.name) +
-        '</span><br><span class="gps-meta">' + esc(f.file) + (f.desc ? " · " + esc(f.desc) : "") +
-        "</span></span></a>";
+      var ext = String(f.file).split(".").pop().toLowerCase();
+      // PDFs preview in a new tab; GPS formats download (browsers can't render them)
+      var isPdf = ext === "pdf";
+      var attrs = isPdf ? 'target="_blank" rel="noopener"' : "download";
+      return '<a class="gps-item" href="gps/' + encodeURIComponent(f.file) + '" ' + attrs + ">" +
+        '<span class="gps-icon">' + (ICONS[ext] || "📄") + "</span>" +
+        '<span class="gps-body"><span class="gps-name">' + esc(f.name) + "</span>" +
+        (f.desc ? '<span class="gps-desc">' + esc(f.desc) + "</span>" : "") +
+        '<span class="gps-meta">' + esc(f.file) +
+        (f.size ? " · " + esc(f.size) : "") +
+        " · " + (isPdf ? "opens in new tab" : "download") + "</span></span></a>";
     }).join("");
   })
   .catch(function () {

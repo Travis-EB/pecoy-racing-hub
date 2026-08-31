@@ -6,7 +6,7 @@ $mime = @{
   ".html"="text/html"; ".css"="text/css"; ".js"="application/javascript";
   ".json"="application/json"; ".png"="image/png"; ".jpg"="image/jpeg";
   ".svg"="image/svg+xml"; ".gpx"="application/gpx+xml"; ".kml"="application/vnd.google-earth.kml+xml";
-  ".txt"="text/plain"; ".ico"="image/x-icon"; ".md"="text/plain"
+  ".txt"="text/plain"; ".ico"="image/x-icon"; ".md"="text/plain"; ".pdf"="application/pdf"
 }
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:$port/")

@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "file": "26B4H-PRERUN-PROC-0827.kml",
+    "name": "Baja 400 Pre-Run Course (KML)",
+    "desc": "SCORE official pre-run procedure, released Aug 27. 5 pre-run legs (S1–S5), 332 virtual checkpoints, 71 race-mile markers, 28 speed-zone points, 25 danger markers, 12 wash crossings, 40 landmarks.",
+    "race": "Baja 400",
+    "size": "1.1 MB"
+  },
+  {
+    "file": "2026-Baja-400-Course-Map.pdf",
+    "name": "Baja 400 Course Map (PDF)",
+    "desc": "Official SCORE course map — overview of the full Ensenada loop. Good for phones and printing for chase crews.",
+    "race": "Baja 400",
+    "size": "804 KB"
+  }
+]
