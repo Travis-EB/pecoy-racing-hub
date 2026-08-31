@@ -149,22 +149,29 @@
     <div class="fuel-entry">
       <div class="field"><label>Race mile at pit</label><input type="number" id="fuelMile" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 118"></div>
       <div class="field"><label>Gallons taken</label><input type="number" id="fuelGallons" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 32.5"></div>
+      <div class="field"><label>Speed-zone mi <span class="opt">(this leg)</span></label><input type="number" id="fuelSz" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 14"></div>
       <div class="field grow"><label>Note (optional)</label><input type="text" id="fuelNote" placeholder="BFG Pit 1, driver swap, etc."></div>
       <button class="btn" id="fuelAdd">Log Pit</button>
     </div>
 
     <div class="stat-row" id="fuelStats">
-      <div class="stat"><span class="stat-val" id="statAvgMpg">&ndash;</span><label>avg mi/gal</label></div>
+      <div class="stat"><span class="stat-val" id="statAvgMpg">&ndash;</span><label>blended mi/gal</label></div>
       <div class="stat"><span class="stat-val" id="statLastMpg">&ndash;</span><label>last leg mi/gal</label></div>
+      <div class="stat"><span class="stat-val" id="statRacePace">&ndash;</span><label>race-pace mi/gal</label></div>
+      <div class="stat"><span class="stat-val" id="statSzPace">&ndash;</span><label>speed-zone mi/gal</label></div>
       <div class="stat"><span class="stat-val" id="statRange">&ndash;</span><label>full-cell range (mi)</label></div>
       <div class="stat"><span class="stat-val" id="statTotal">&ndash;</span><label>total gal added</label></div>
     </div>
+    <div class="split-note" id="splitNote"></div>
 
+    <div class="fuel-entry compact">
+      <div class="field"><label>Speed-zone miles on the whole course <span class="opt">(optional)</span></label><input type="number" id="courseSz" inputmode="decimal" min="0" step="1" placeholder="e.g. 55"></div>
+    </div>
     <div class="projection" id="fuelProjection"></div>
 
     <div class="table-scroll">
       <table class="data-table" id="fuelTable">
-        <thead><tr><th>#</th><th>Mile</th><th>Leg (mi)</th><th>Gal</th><th>mi/gal</th><th>Note</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Mile</th><th>Leg (mi)</th><th>Race mi</th><th>SZ mi</th><th>Gal</th><th>mi/gal</th><th>Note</th><th></th></tr></thead>
         <tbody id="fuelTableBody"></tbody>
       </table>
     </div>
@@ -203,8 +210,9 @@
   <div class="card">
     <div class="card-label">GPS / Course Files</div>
     <div id="gpsList" class="gps-list"><p class="muted">Loading file list&hellip;</p></div>
-    <p class="muted" id="gpsHowTo"><strong>Loading the KML:</strong> open it in Google Earth, Gaia GPS, or onX Offroad to view the course; most GPS units (Lowrance, Garmin) import KML directly or via their desktop software. Download it to your phone <em>before</em> leaving for Baja &mdash; cell service disappears fast out there.</p>
-    <p class="muted">Need another file added? Send it over and it goes up here.</p>
+    <p class="muted" id="gpsHowTo"><strong>KML:</strong> open in Google Earth, Gaia GPS, or onX Offroad to view the course.<br>
+      <strong>Lowrance .usr:</strong> copy to a microSD card, insert it in the unit, then <em>Files &rarr; (card) &rarr; select the .usr &rarr; Import</em>. Grab the <strong>HDS</strong> waypoint file for HDS Gen2/Gen3 and newer; use the <strong>v2</strong> file if an older unit rejects it.</p>
+    <p class="muted">Download everything to your phone and cards <em>before</em> leaving for Baja &mdash; cell service disappears fast out there. Need another file added? Send it over and it goes up here.</p>
   </div>
 </section>
 

@@ -189,8 +189,14 @@ input::placeholder { color: var(--gray-dark); }
 .fuel-entry .field.grow input { width: 100%; }
 .fuel-entry .field.grow { flex: 1 1 200px; }
 
-.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; margin: 14px 0; }
 @media (max-width: 560px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+.split-note { font-size: 0.88rem; color: var(--gray); line-height: 1.5; margin: -4px 0 4px; }
+.split-note:empty { display: none; }
+.split-note strong { color: var(--volt); }
+.field label .opt { text-transform: none; letter-spacing: 0; color: var(--gray-dark); }
+.fuel-entry.compact { margin: 14px 0 0; }
+.fuel-entry.compact .field input { width: 170px; }
 .stat {
   background: var(--navy-800); border: 1px solid var(--navy-700);
   border-radius: 10px; padding: 12px; text-align: center;
@@ -235,7 +241,13 @@ input::placeholder { color: var(--gray-dark); }
 .fact label { color: var(--gray); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; }
 
 /* ---------- gps ---------- */
-.gps-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.gps-list { display: flex; flex-direction: column; gap: 18px; margin-bottom: 12px; }
+.gps-group { display: flex; flex-direction: column; gap: 8px; }
+.gps-group-title {
+  color: var(--gray); font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding-bottom: 4px; border-bottom: 1px solid var(--navy-700);
+}
 .gps-item {
   display: flex; align-items: flex-start; gap: 12px;
   background: var(--navy-800); border: 1px solid var(--navy-700);

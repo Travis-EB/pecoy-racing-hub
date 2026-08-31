@@ -407,20 +407,67 @@ function sortedFuel() {
 
 function fuelStats() {
   var entries = sortedFuel();
-  var prev = 0, totalGal = 0, lastMpg = NaN, legs = [];
+  var prev = 0, totalGal = 0, lastMpg = NaN, legs = [], totalSz = 0;
   entries.forEach(function (e) {
     var mile = Number(e.mile), gal = Number(e.gallons);
     var dist = mile - prev;
+    var sz = Math.min(Math.max(Number(e.sz) || 0, 0), Math.max(dist, 0)); // SZ can't exceed the leg
+    var race = dist - sz;
     var mpg = gal > 0 ? dist / gal : NaN;
-    legs.push({ entry: e, mile: mile, dist: dist, gal: gal, mpg: mpg });
+    legs.push({ entry: e, mile: mile, dist: dist, sz: sz, race: race, gal: gal, mpg: mpg });
     totalGal += gal;
+    totalSz += sz;
     prev = mile;
     if (isFinite(mpg)) lastMpg = mpg;
   });
   var totalMiles = entries.length ? Number(entries[entries.length - 1].mile) : 0;
   var avgMpg = totalGal > 0 ? totalMiles / totalGal : NaN;
-  return { legs: legs, totalGal: totalGal, totalMiles: totalMiles, avgMpg: avgMpg, lastMpg: lastMpg };
+  var s = { legs: legs, totalGal: totalGal, totalMiles: totalMiles, totalSz: totalSz,
+            avgMpg: avgMpg, lastMpg: lastMpg };
+  var split = solveSplit(legs);
+  s.racePace = split.racePace;
+  s.szPace = split.szPace;
+  s.splitStatus = split.status;
+  return s;
 }
+
+// Separate race-pace economy from speed-zone economy.
+// Each leg burns: gallons = raceMiles/racePace + szMiles/szPace
+// Let a = gal per race mile, b = gal per SZ mile — least squares through the origin.
+function solveSplit(legs) {
+  var usable = legs.filter(function (l) { return l.gal > 0 && l.dist > 0; });
+  if (usable.length < 2) return { status: usable.length ? "need2" : "none" };
+  if (!usable.some(function (l) { return l.sz > 0; })) return { status: "nosz" };
+
+  var Srr = 0, Sss = 0, Srs = 0, Srg = 0, Ssg = 0;
+  usable.forEach(function (l) {
+    Srr += l.race * l.race; Sss += l.sz * l.sz; Srs += l.race * l.sz;
+    Srg += l.race * l.gal;  Ssg += l.sz * l.gal;
+  });
+  var det = Srr * Sss - Srs * Srs;
+  // Near-zero determinant = every leg has the same race/SZ mix, so the two
+  // rates can't be told apart from this data.
+  if (Math.abs(det) < 1e-9 || Sss === 0) return { status: "degenerate" };
+
+  var a = (Srg * Sss - Ssg * Srs) / det; // gal per race mile
+  var b = (Ssg * Srr - Srg * Srs) / det; // gal per speed-zone mile
+  if (!(a > 0) || !(b > 0)) return { status: "unstable" };
+
+  var racePace = 1 / a, szPace = 1 / b;
+  // Speed zones should be the thriftier miles; if the math says otherwise the
+  // sample is too noisy to trust rather than a real finding.
+  if (szPace <= racePace) return { status: "noisy", racePace: racePace, szPace: szPace };
+  return { status: "ok", racePace: racePace, szPace: szPace };
+}
+
+var SPLIT_MESSAGES = {
+  none: "",
+  need2: "Log a second pit with speed-zone miles to separate race pace from speed-zone pace.",
+  nosz: "Add speed-zone miles to your pit entries and the calculator will split race pace from speed-zone pace.",
+  degenerate: "Every leg has the same speed-zone mix, so the two rates can't be separated yet — they'll split once a leg differs.",
+  unstable: "Not enough spread in the data yet to separate the two rates reliably.",
+  noisy: "The split came out with speed zones burning more than race pace — that's almost certainly noise in a small sample, so only the blended number is shown."
+};
 
 function renderFuel() {
   var s = fuelStats();
@@ -429,12 +476,22 @@ function renderFuel() {
   $("statRange").textContent = isFinite(s.avgMpg) ? Math.floor(s.avgMpg * FUEL_CELL_GALLONS) : "–";
   $("statTotal").textContent = fmt(s.totalGal, 1);
 
+  var showSplit = s.splitStatus === "ok";
+  $("statRacePace").textContent = showSplit ? fmt(s.racePace) : "–";
+  $("statSzPace").textContent = showSplit ? fmt(s.szPace) : "–";
+  $("splitNote").innerHTML = showSplit
+    ? "Speed-zone miles are running <strong>" + fmt(s.szPace / s.racePace * 100 - 100, 0) +
+      "% better</strong> than race pace (" + fmt(s.szPace) + " vs " + fmt(s.racePace) +
+      " mi/gal) across " + fmt(s.totalSz, 0) + " speed-zone miles logged."
+    : (SPLIT_MESSAGES[s.splitStatus] || "");
+
   $("fuelTableBody").innerHTML = s.legs.map(function (l, i) {
     return "<tr><td>" + (i + 1) + "</td><td>" + fmt(l.mile, 1) + "</td><td>" + fmt(l.dist, 1) +
+      "</td><td>" + fmt(l.race, 1) + "</td><td>" + (l.sz > 0 ? fmt(l.sz, 1) : "<span class='muted'>–</span>") +
       "</td><td>" + fmt(l.gal, 1) + "</td><td><strong>" + fmt(l.mpg) + "</strong></td><td>" +
       esc(l.entry.note || "") + '</td><td><button class="btn btn-ghost btn-small" data-fdel="' +
       esc(l.entry.id) + '">✕</button></td></tr>';
-  }).join("") || '<tr><td colspan="7" class="muted">No pits logged yet for this race.</td></tr>';
+  }).join("") || '<tr><td colspan="9" class="muted">No pits logged yet for this race.</td></tr>';
 
   document.querySelectorAll("[data-fdel]").forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -454,24 +511,47 @@ function renderProjection(s) {
     el.innerHTML = "<strong>" + dist + " mi</strong> race distance. Log a pit to project total fuel needed.";
     return;
   }
-  var needed = dist / s.avgMpg;
+
+  var courseSz = parseFloat($("courseSz").value);
+  var useSplit = s.splitStatus === "ok" && isFinite(courseSz) && courseSz > 0 && courseSz < dist;
+  var needed, basis;
+  if (useSplit) {
+    // Split projection: race miles and speed-zone miles burn at their own rates.
+    needed = (dist - courseSz) / s.racePace + courseSz / s.szPace;
+    basis = "Splitting <strong>" + fmt(dist - courseSz, 0) + " race mi</strong> at " +
+      fmt(s.racePace) + " and <strong>" + fmt(courseSz, 0) + " speed-zone mi</strong> at " +
+      fmt(s.szPace) + " mi/gal, ";
+  } else {
+    needed = dist / s.avgMpg;
+    basis = "At <strong>" + fmt(s.avgMpg) + " mi/gal</strong> blended, ";
+  }
+
   var fills = Math.max(0, Math.ceil((needed - FUEL_CELL_GALLONS) / FUEL_CELL_GALLONS));
   var remaining = Math.max(0, dist - s.totalMiles);
-  var remainingGal = remaining / s.avgMpg;
-  el.innerHTML = "At <strong>" + fmt(s.avgMpg) + " mi/gal</strong>, the full <strong>" + dist +
+  var remainingGal = remaining / (useSplit ? s.racePace : s.avgMpg);
+  el.innerHTML = basis + "the full <strong>" + dist +
     " mi</strong> needs about <strong>" + fmt(needed, 1) + " gal</strong> — " +
     "a full 89-gal cell plus <strong>" + fmt(needed - FUEL_CELL_GALLONS, 1) + " gal</strong> " +
     "(minimum <strong>" + fills + "</strong> refuel" + (fills === 1 ? "" : "s") + ").<br>" +
-    "<span class=\"muted\">" + fmt(remaining, 0) + " mi still to run ≈ " + fmt(remainingGal, 1) + " gal.</span>";
+    "<span class=\"muted\">" + fmt(remaining, 0) + " mi still to run ≈ " + fmt(remainingGal, 1) + " gal." +
+    (s.splitStatus === "ok" && !useSplit
+      ? " Enter the course's speed-zone miles above for a split projection."
+      : "") + "</span>";
 }
+$("courseSz").addEventListener("input", function () { renderProjection(fuelStats()); });
 
 $("fuelAdd").addEventListener("click", function () {
   var mile = parseFloat($("fuelMile").value);
   var gal = parseFloat($("fuelGallons").value);
+  var sz = parseFloat($("fuelSz").value);
   if (!isFinite(mile) || mile < 0) { $("fuelMile").focus(); return; }
   if (!isFinite(gal) || gal <= 0) { $("fuelGallons").focus(); return; }
-  Store.addItem(fuelListName(), { mile: mile, gallons: gal, note: $("fuelNote").value.trim() });
-  $("fuelMile").value = ""; $("fuelGallons").value = ""; $("fuelNote").value = "";
+  Store.addItem(fuelListName(), {
+    mile: mile, gallons: gal,
+    sz: isFinite(sz) && sz > 0 ? sz : 0,
+    note: $("fuelNote").value.trim()
+  });
+  ["fuelMile", "fuelGallons", "fuelSz", "fuelNote"].forEach(function (id) { $(id).value = ""; });
 });
 
 function watchFuel() {
@@ -535,8 +615,8 @@ fetch("gps/manifest.json")
       $("gpsList").innerHTML = '<p class="muted">No course files posted yet. GPS files for the Baja 400 will show up here once SCORE releases the course.</p>';
       return;
     }
-    var ICONS = { kml: "🛰️", kmz: "🛰️", gpx: "🛰️", pdf: "🗺️" };
-    $("gpsList").innerHTML = files.map(function (f) {
+    var ICONS = { kml: "🛰️", kmz: "🛰️", gpx: "🛰️", pdf: "🗺️", usr: "📡" };
+    function itemHtml(f) {
       var ext = String(f.file).split(".").pop().toLowerCase();
       // PDFs preview in a new tab; GPS formats download (browsers can't render them)
       var isPdf = ext === "pdf";
@@ -548,6 +628,18 @@ fetch("gps/manifest.json")
         '<span class="gps-meta">' + esc(f.file) +
         (f.size ? " · " + esc(f.size) : "") +
         " · " + (isPdf ? "opens in new tab" : "download") + "</span></span></a>";
+    }
+    // Group files under headings, preserving manifest order.
+    var groups = [];
+    files.forEach(function (f) {
+      var key = f.group || "Files";
+      var g = groups.filter(function (x) { return x.key === key; })[0];
+      if (!g) { g = { key: key, items: [] }; groups.push(g); }
+      g.items.push(f);
+    });
+    $("gpsList").innerHTML = groups.map(function (g) {
+      return '<div class="gps-group"><div class="gps-group-title">' + esc(g.key) + "</div>" +
+        g.items.map(itemHtml).join("") + "</div>";
     }).join("");
   })
   .catch(function () {

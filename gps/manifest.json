@@ -1,16 +1,44 @@
 [
   {
+    "group": "Baja 400 Course",
     "file": "26B4H-PRERUN-PROC-0827.kml",
     "name": "Baja 400 Pre-Run Course (KML)",
     "desc": "SCORE official pre-run procedure, released Aug 27. 5 pre-run legs (S1–S5), 332 virtual checkpoints, 71 race-mile markers, 28 speed-zone points, 25 danger markers, 12 wash crossings, 40 landmarks.",
-    "race": "Baja 400",
     "size": "1.1 MB"
   },
   {
+    "group": "Baja 400 Course",
     "file": "2026-Baja-400-Course-Map.pdf",
     "name": "Baja 400 Course Map (PDF)",
     "desc": "Official SCORE course map — overview of the full Ensenada loop. Good for phones and printing for chase crews.",
-    "race": "Baja 400",
     "size": "804 KB"
+  },
+  {
+    "group": "Lowrance GPS Units",
+    "file": "Waypoints_Lowrance-HDS.usr",
+    "name": "Waypoints — HDS units (USR v4)",
+    "desc": "Chase and landmark waypoints (Colonet, El Alamo, 3 Hermanos, km71, San Isidro…). Use this one on HDS Gen2/Gen3 and newer units.",
+    "size": "9 KB"
+  },
+  {
+    "group": "Lowrance GPS Units",
+    "file": "Waypoints_Lowrance-V2.usr",
+    "name": "Waypoints — older units (USR v2)",
+    "desc": "Same waypoint set exported in the older USR v2 format for legacy Lowrance units that won't read v4.",
+    "size": "5 KB"
+  },
+  {
+    "group": "Lowrance GPS Units",
+    "file": "Access_Lowrance.usr",
+    "name": "Access Roads (USR v2)",
+    "desc": "Access road and trail network — the routes chase trucks use to reach pits and remote sections.",
+    "size": "56 KB"
+  },
+  {
+    "group": "Lowrance GPS Units",
+    "file": "Hwys_Lowrance.usr",
+    "name": "Highways (USR v2)",
+    "desc": "Baja highway network overlay for navigation between pits and back to town.",
+    "size": "33 KB"
   }
 ]
