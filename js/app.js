@@ -796,8 +796,7 @@ var VEHICLE_SEED = [
   { id: "v5", name: "Chase 2", desc: "White Ford F-350 tan interior", vin: "1FT8W3BT9TEC66389", plate: "14906K4" },
   { id: "v6", name: "Big Tex Trailer", desc: "Big Tex trailer 42'", vin: "16VPX2522F2094965", plate: "4PP3240" },
   { id: "v7", name: "Fast Chase", desc: "Black Ford Raptor w/tire rack", vin: "1FTFW1RG2JFD13208", plate: "14033N2" },
-  { id: "v8", name: "Service Body", desc: "White Ford F-350 XLT Service Body", vin: "", plate: "",
-    note: "VIN and plate still needed before the border crossing." }
+  { id: "v8", name: "Service Body", desc: "White Ford F-350 XLT Service Body", vin: "1FT8W3BT5TEC28786", plate: "54781M4" }
 ];
 var DOC_KINDS = [["reg", "Registration"], ["ins", "Insurance"]];
 var BAJA1000_END = new Date("2026-11-15T23:59:59-08:00").getTime();
