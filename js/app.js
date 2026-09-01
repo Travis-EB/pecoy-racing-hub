@@ -188,6 +188,18 @@ var Store = {
     this._localSet("doc:" + name, obj);
     return Promise.resolve();
   },
+  getDoc: function (name) { // one-shot read (used for on-demand file content)
+    if (this.connected) {
+      return this.db.collection("docs").doc(name).get()
+        .then(function (doc) { return doc.exists ? doc.data() : null; });
+    }
+    return Promise.resolve(this._localGet("doc:" + name, null));
+  },
+  deleteDoc: function (name) {
+    if (this.connected) return this.db.collection("docs").doc(name).delete();
+    try { localStorage.removeItem("pch_doc:" + name); } catch (e) {}
+    return Promise.resolve();
+  },
 
   // ----- localStorage plumbing -----
   _localGet: function (name, fallback) {
@@ -770,6 +782,226 @@ $("hotelAdd").addEventListener("click", function () {
   ["hName", "hAddress", "hDates", "hConf", "hWho", "hNotes"].forEach(function (id) { $(id).value = ""; });
   $("hotelFormWrap").open = false;
 });
+
+/* ============================================================
+   Vehicle paperwork
+   ============================================================ */
+
+// Seeded from Baja_400_Vehicle_List.xlsx (Sep 2026).
+var VEHICLE_SEED = [
+  { id: "v1", name: "Pre runner ME", desc: "Grey RZR Pro R MPI st. wheel", vin: "3NSRGL2K6PG326554", plate: "CTA3AT" },
+  { id: "v2", name: "Pre runner BP", desc: "Grey RZR Pro R U.S. flag roof", vin: "3NSRGD2K7RG331495", plate: "EEC389" },
+  { id: "v3", name: "White RZR", desc: "White RZR", vin: "3NSRPK2TG228092", plate: "",
+    note: "VIN as provided is 15 characters — Polaris VINs are 17. Verify against the title/frame plate." },
+  { id: "v4", name: "Chase 1", desc: "White Ford F-350 black interior", vin: "1FT8W3BT3SEC67651", plate: "14905K4" },
+  { id: "v5", name: "Chase 2", desc: "White Ford F-350 tan interior", vin: "1FT8W3BT9TEC66389", plate: "14906K4" },
+  { id: "v6", name: "Big Tex Trailer", desc: "Big Tex trailer 42'", vin: "16VPX2522F2094965", plate: "4PP3240" },
+  { id: "v7", name: "Fast Chase", desc: "Black Ford Raptor w/tire rack", vin: "1FTFW1RG2JFD13208", plate: "14033N2" },
+  { id: "v8", name: "Service Body", desc: "White Ford F-350 XLT Service Body", vin: "", plate: "",
+    note: "VIN and plate still needed before the border crossing." }
+];
+var DOC_KINDS = [["reg", "Registration"], ["ins", "Insurance"]];
+var BAJA1000_END = new Date("2026-11-15T23:59:59-08:00").getTime();
+var FILE_B64_CAP = 950000; // Firestore doc limit is 1 MiB; keep headroom
+
+var vehState = null;
+
+function freshVehState() {
+  return { list: VEHICLE_SEED.map(function (v) {
+    return { id: v.id, name: v.name, desc: v.desc, vin: v.vin, plate: v.plate, note: v.note || "",
+      reg: { inv: false, exp: "" }, ins: { inv: false, exp: "" }, files: [] };
+  }) };
+}
+function saveVehState() { Store.setDoc("vehicles", vehState); }
+
+// exp is "YYYY-MM-DD" from a date input
+function expStatus(exp) {
+  if (!exp) return { cls: "gray", label: "no date set" };
+  var t = new Date(exp + "T23:59:59").getTime();
+  if (t < Date.now()) return { cls: "red", label: "EXPIRED " + exp };
+  if (t < BAJA1000_END) return { cls: "amber", label: "expires " + exp + " — before Baja 1000 ends" };
+  return { cls: "green", label: "valid thru " + exp };
+}
+function docReady(d) {
+  var s = expStatus(d.exp);
+  return d.inv && s.cls !== "red" && s.cls !== "gray";
+}
+function vehReady(v) { return docReady(v.reg) && docReady(v.ins); }
+
+function renderVehicles() {
+  if (!vehState) return;
+  var ready = vehState.list.filter(vehReady).length, total = vehState.list.length;
+  $("readyBar").style.width = (total ? ready / total * 100 : 0) + "%";
+  $("readyBar").className = "fuel-gauge-fill" + (ready < total ? " low" : "");
+  $("readySummary").textContent = ready + " of " + total + " vehicles border-ready";
+
+  $("vehicleList").innerHTML = vehState.list.map(function (v) {
+    var docsHtml = DOC_KINDS.map(function (k) {
+      var kind = k[0], label = k[1], d = v[kind];
+      var st = expStatus(d.exp);
+      var files = (v.files || []).filter(function (f) { return f.kind === kind; });
+      var filesHtml = files.map(function (f) {
+        return '<span class="vfile">' +
+          '<a href="#" data-vview="' + f.id + '">' + esc(f.label) + "</a>" +
+          ' <button class="vfile-x" data-vfdel="' + f.id + '" data-vid="' + v.id + '" title="delete">✕</button></span>';
+      }).join("");
+      return '<div class="vdoc">' +
+        '<div class="vdoc-head"><span class="vdoc-title">' + label + '</span>' +
+        '<span class="exp-pill ' + st.cls + '">' + esc(st.label) + "</span></div>" +
+        '<div class="vdoc-row">' +
+          '<label class="chk"><input type="checkbox" data-vinv="' + v.id + ":" + kind + '"' + (d.inv ? " checked" : "") + "> in vehicle</label>" +
+          '<input type="date" data-vexp="' + v.id + ":" + kind + '" value="' + esc(d.exp) + '" title="expiration date">' +
+          '<label class="btn btn-ghost btn-small upload-btn">📷 upload' +
+            '<input type="file" accept="image/*,application/pdf" data-vup="' + v.id + ":" + kind + '" hidden></label>' +
+        "</div>" +
+        (filesHtml ? '<div class="vfiles">' + filesHtml + "</div>" : "") +
+        "</div>";
+    }).join("");
+
+    return '<div class="card vcard' + (vehReady(v) ? " vready" : "") + '">' +
+      '<div class="vhead">' +
+        '<div><span class="vname">' + esc(v.name) + '</span> <span class="muted">' + esc(v.desc) + "</span></div>" +
+        '<span class="ready-pill ' + (vehReady(v) ? "green" : "gray") + '">' + (vehReady(v) ? "✓ READY" : "not ready") + "</span>" +
+      "</div>" +
+      '<div class="vmeta">VIN: <code>' + (v.vin ? esc(v.vin) : "—") + "</code> · Plate: <code>" +
+        (v.plate ? esc(v.plate) : "—") + '</code> <button class="btn btn-ghost btn-small" data-vedit="' + v.id + '">edit</button></div>' +
+      (v.note ? '<div class="vnote">⚠ ' + esc(v.note) + "</div>" : "") +
+      '<div class="vdocs">' + docsHtml + "</div></div>";
+  }).join("");
+
+  bindVehicleEvents();
+}
+
+function bindVehicleEvents() {
+  var root = $("vehicleList");
+  root.querySelectorAll("[data-vinv]").forEach(function (el) {
+    el.addEventListener("change", function () {
+      var p = el.dataset.vinv.split(":");
+      findVeh(p[0])[p[1]].inv = el.checked;
+      saveVehState(); renderVehicles();
+    });
+  });
+  root.querySelectorAll("[data-vexp]").forEach(function (el) {
+    el.addEventListener("change", function () {
+      var p = el.dataset.vexp.split(":");
+      findVeh(p[0])[p[1]].exp = el.value;
+      saveVehState(); renderVehicles();
+    });
+  });
+  root.querySelectorAll("[data-vup]").forEach(function (el) {
+    el.addEventListener("change", function () {
+      if (el.files && el.files[0]) {
+        var p = el.dataset.vup.split(":");
+        uploadVehicleFile(p[0], p[1], el.files[0]);
+      }
+    });
+  });
+  root.querySelectorAll("[data-vview]").forEach(function (el) {
+    el.addEventListener("click", function (e) { e.preventDefault(); viewVehicleFile(el.dataset.vview); });
+  });
+  root.querySelectorAll("[data-vfdel]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      if (!confirm("Delete this document?")) return;
+      var v = findVeh(el.dataset.vid);
+      v.files = v.files.filter(function (f) { return f.id !== el.dataset.vfdel; });
+      Store.deleteDoc("vfile_" + el.dataset.vfdel);
+      saveVehState(); renderVehicles();
+    });
+  });
+  root.querySelectorAll("[data-vedit]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var v = findVeh(el.dataset.vedit);
+      var vin = prompt("VIN for " + v.name + ":", v.vin); if (vin === null) return;
+      var plate = prompt("License plate for " + v.name + ":", v.plate); if (plate === null) return;
+      v.vin = vin.trim(); v.plate = plate.trim();
+      // clear the fill-me-in note once both are present
+      if (v.vin && v.plate && /still needed/.test(v.note || "")) v.note = "";
+      saveVehState(); renderVehicles();
+    });
+  });
+}
+function findVeh(id) {
+  return vehState.list.filter(function (v) { return v.id === id; })[0];
+}
+
+/* ----- file upload: compress images client-side to fit one Firestore doc ----- */
+function uploadVehicleFile(vid, kind, file) {
+  var v = findVeh(vid);
+  var isPdf = file.type === "application/pdf";
+  var finish = function (dataUrl) {
+    if (dataUrl.length > FILE_B64_CAP) {
+      alert("That file is too large even after compression. Take a straight-on photo of the document instead of scanning at high resolution.");
+      return;
+    }
+    var id = "f" + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+    var label = (kind === "reg" ? "Registration" : "Insurance") + (isPdf ? " (PDF)" : " (photo)");
+    Store.setDoc("vfile_" + id, { data: dataUrl, name: file.name, ts: Date.now() }).then(function () {
+      v.files = v.files || [];
+      v.files.push({ id: id, kind: kind, label: label, ts: Date.now() });
+      saveVehState(); renderVehicles();
+    }).catch(function (e) {
+      alert("Upload failed: " + e.message);
+    });
+  };
+
+  if (isPdf) {
+    if (file.size > 700 * 1024) {
+      alert("PDF is over 700 KB — too big to store. Photograph the document instead, or export a smaller PDF.");
+      return;
+    }
+    var fr = new FileReader();
+    fr.onload = function () { finish(fr.result); };
+    fr.readAsDataURL(file);
+    return;
+  }
+
+  // image: draw to canvas, step quality/scale down until under the cap
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function () {
+    URL.revokeObjectURL(url);
+    var steps = [[1600, 0.75], [1600, 0.6], [1200, 0.6], [1000, 0.5], [800, 0.4]];
+    var out = null;
+    for (var i = 0; i < steps.length; i++) {
+      var maxDim = steps[i][0], q = steps[i][1];
+      var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      var c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      out = c.toDataURL("image/jpeg", q);
+      if (out.length <= FILE_B64_CAP) break;
+    }
+    finish(out);
+  };
+  img.onerror = function () { URL.revokeObjectURL(url); alert("Couldn't read that image."); };
+  img.src = url;
+}
+
+function viewVehicleFile(id) {
+  Store.getDoc("vfile_" + id).then(function (doc) {
+    if (!doc || !doc.data) { alert("File not found — it may have been deleted."); return; }
+    // data: URLs can't be opened as a top-level page — convert to a blob URL
+    var parts = doc.data.split(",");
+    var mime = parts[0].match(/data:(.*?);/)[1];
+    var bin = atob(parts[1]);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    window.open(blobUrl, "_blank");
+  });
+}
+
+Store.watchDoc("vehicles", function (doc) {
+  if (doc && doc.list && doc.list.length) {
+    vehState = doc;
+  } else if (!vehState) {
+    vehState = freshVehState();
+    saveVehState();
+  }
+  renderVehicles();
+});
+setSyncNote("vehicleSyncNote");
 
 /* ============================================================
    Footer status

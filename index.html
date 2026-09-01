@@ -27,6 +27,7 @@
   <button class="tab" data-tab="chat">Team Chat</button>
   <button class="tab" data-tab="season">Season</button>
   <button class="tab" data-tab="hotels">Hotels</button>
+  <button class="tab" data-tab="paperwork">Paperwork</button>
 </nav>
 
 <main>
@@ -305,6 +306,20 @@
       </div>
     </details>
   </div>
+</section>
+
+<!-- ============ PAPERWORK ============ -->
+<section class="panel" id="tab-paperwork">
+  <div class="card">
+    <div class="card-label">Vehicle Paperwork &mdash; Border Readiness</div>
+    <div class="ready-strip">
+      <div class="fuel-gauge"><div class="fuel-gauge-fill" id="readyBar" style="width:0%"></div></div>
+      <div class="muted" id="readySummary">Loading&hellip;</div>
+    </div>
+    <div id="vehicleSyncNote" class="sync-note"></div>
+    <p class="muted">For each vehicle: upload a photo (or PDF) of the registration and insurance, set the expiration dates, and check the box once the physical copies are <strong>in the vehicle</strong>. Anything expired shows red; anything expiring before the Baja 1000 ends (Nov 15) shows a warning.</p>
+  </div>
+  <div id="vehicleList"></div>
 </section>
 
 </main>

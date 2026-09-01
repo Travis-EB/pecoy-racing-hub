@@ -309,6 +309,51 @@ input::placeholder { color: var(--gray-dark); }
 }
 .notice .meta { color: var(--gray-dark); font-size: 0.72rem; margin-top: 3px; }
 
+/* ---------- vehicle paperwork ---------- */
+.ready-strip { margin-bottom: 10px; }
+.vcard { border-left: 3px solid var(--navy-700); }
+.vcard.vready { border-left-color: var(--volt); }
+.vhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vname { font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 1.05rem; }
+.vmeta { color: var(--gray); font-size: 0.82rem; margin-top: 6px; }
+.vnote {
+  background: rgba(229, 72, 77, 0.1); border-left: 3px solid var(--red);
+  color: #f0a5a8; border-radius: 0 6px 6px 0;
+  padding: 7px 10px; margin-top: 8px; font-size: 0.83rem;
+}
+.ready-pill {
+  border-radius: 999px; padding: 3px 12px; font-size: 0.75rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.ready-pill.green { background: var(--volt); color: var(--navy-950); }
+.ready-pill.gray { background: var(--navy-700); color: var(--gray); }
+.vdocs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+@media (max-width: 640px) { .vdocs { grid-template-columns: 1fr; } }
+.vdoc { background: var(--navy-800); border: 1px solid var(--navy-700); border-radius: 10px; padding: 10px 12px; }
+.vdoc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vdoc-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.exp-pill { border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; }
+.exp-pill.green { background: rgba(205, 234, 29, 0.15); color: var(--volt); }
+.exp-pill.amber { background: rgba(255, 170, 40, 0.15); color: #ffb84d; }
+.exp-pill.red { background: rgba(229, 72, 77, 0.18); color: #ff8589; }
+.exp-pill.gray { background: var(--navy-700); color: var(--gray); }
+.vdoc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 9px; }
+.vdoc-row input[type="date"] {
+  background: var(--navy-900); color: var(--white); border: 1px solid var(--navy-700);
+  border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 0.82rem; color-scheme: dark;
+}
+.chk { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--gray); cursor: pointer; }
+.chk input { accent-color: var(--volt); width: 17px; height: 17px; }
+.upload-btn { cursor: pointer; }
+.vfiles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+.vfile {
+  background: var(--navy-900); border: 1px solid var(--navy-700); border-radius: 6px;
+  padding: 4px 8px; font-size: 0.8rem;
+}
+.vfile a { color: var(--volt); text-decoration: none; }
+.vfile-x { background: none; border: none; color: var(--gray-dark); cursor: pointer; font-size: 0.8rem; }
+.vfile-x:hover { color: var(--red); }
+
 /* ---------- footer ---------- */
 .site-footer {
   display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
