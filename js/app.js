@@ -791,8 +791,7 @@ $("hotelAdd").addEventListener("click", function () {
 var VEHICLE_SEED = [
   { id: "v1", name: "Pre runner ME", desc: "Grey RZR Pro R MPI st. wheel", vin: "3NSRGL2K6PG326554", plate: "CTA3AT" },
   { id: "v2", name: "Pre runner BP", desc: "Grey RZR Pro R U.S. flag roof", vin: "3NSRGD2K7RG331495", plate: "EEC389" },
-  { id: "v3", name: "White RZR", desc: "White RZR", vin: "3NSRPK2TG228092", plate: "",
-    note: "VIN as provided is 15 characters — Polaris VINs are 17. Verify against the title/frame plate." },
+  { id: "v3", name: "White RZR", desc: "White RZR", vin: "3NSRPK2K2TG228092", plate: "" },
   { id: "v4", name: "Chase 1", desc: "White Ford F-350 black interior", vin: "1FT8W3BT3SEC67651", plate: "14905K4" },
   { id: "v5", name: "Chase 2", desc: "White Ford F-350 tan interior", vin: "1FT8W3BT9TEC66389", plate: "14906K4" },
   { id: "v6", name: "Big Tex Trailer", desc: "Big Tex trailer 42'", vin: "16VPX2522F2094965", plate: "4PP3240" },
