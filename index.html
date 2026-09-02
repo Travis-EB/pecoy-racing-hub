@@ -6,6 +6,7 @@
 <title>PeCoy Racing Hub — #212 Trophy Truck Spec</title>
 <meta name="description" content="PeCoy Racing team hub — 2026 SCORE World Desert Championship. Pit strategy, fuel calculator, GPS files, team chat, live streams.">
 <link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -31,6 +32,7 @@
 <nav class="tab-bar" id="tabBar">
   <button class="tab active" data-tab="home">Home</button>
   <button class="tab" data-tab="live">Live</button>
+  <button class="tab" data-tab="map">Map</button>
   <button class="tab" data-tab="pits">Pits &amp; Fuel</button>
   <button class="tab" data-tab="gps">GPS Files</button>
   <button class="tab" data-tab="chat">Team Chat</button>
@@ -112,6 +114,24 @@
       <a class="btn btn-ghost" href="https://results.score-international.com/results/" target="_blank" rel="noopener">Live Timing &amp; Results</a>
     </div>
     <p class="muted">Race-day tracking links (RaceWeather/tracking pages) get posted on the notice board when SCORE publishes them.</p>
+  </div>
+</section>
+
+<!-- ============ LIVE MAP ============ -->
+<section class="panel" id="tab-map">
+  <div class="card">
+    <div class="section-head">
+      <div class="card-label">Live Team Map</div>
+      <div class="map-btns">
+        <button class="btn btn-small" id="shareLoc">📍 Share my location</button>
+        <button class="btn btn-ghost btn-small" id="fitTeam">Fit team</button>
+        <button class="btn btn-ghost btn-small" id="fitCourse">Fit course</button>
+      </div>
+    </div>
+    <div id="mapSyncNote" class="sync-note"></div>
+    <div id="liveMap"><div class="map-loading">Loading map&hellip;</div></div>
+    <div id="deviceList" class="device-list"></div>
+    <p class="muted"><strong>Sharing:</strong> updates every ~30 s while the hub is open with the screen on (browsers pause GPS in the background &mdash; mount the phone with the page up in chase trucks). The layers button on the map switches Streets/Satellite and toggles the course, race miles, dangers, and speed zones from the official SCORE KML.</p>
   </div>
 </section>
 
@@ -299,6 +319,7 @@
   <span class="muted" id="connStatus"></span>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <!-- Firebase (compat builds — no bundler needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

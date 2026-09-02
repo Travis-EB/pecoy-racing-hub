@@ -223,6 +223,20 @@ var Store = {
     this._localSet("doc:" + name, obj);
     return Promise.resolve();
   },
+  // field-level merge into a doc — concurrent writers touching different
+  // fields don't clobber each other (used for live locations)
+  mergeDoc: function (name, obj) {
+    if (this.connected) return this.db.collection("docs").doc(name).set(obj, { merge: true });
+    var cur = this._localGet("doc:" + name, {}) || {};
+    Object.keys(obj).forEach(function (k) {
+      if (obj[k] === "__DELETE__") delete cur[k]; else cur[k] = obj[k];
+    });
+    this._localSet("doc:" + name, cur);
+    return Promise.resolve();
+  },
+  deleteField: function () { // sentinel for mergeDoc removals
+    return this.connected ? firebase.firestore.FieldValue.delete() : "__DELETE__";
+  },
   getList: function (name) { // one-shot list read (used for migration)
     if (this.connected) {
       return this.db.collection(name).orderBy("ts", "asc").limit(500).get()
@@ -285,6 +299,10 @@ tabs.forEach(function (btn) {
     document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
     $("tab-" + btn.dataset.tab).classList.add("active");
     if (btn.dataset.tab === "chat") scrollChat(true);
+    if (btn.dataset.tab === "map") {
+      initMap();
+      setTimeout(function () { if (lmap) lmap.invalidateSize(); }, 200);
+    }
   });
 });
 
@@ -385,6 +403,238 @@ Store.watchDoc("standings", function (doc) {
   if (doc && doc.rows && doc.rows.length) standingsData = doc.rows;
   if (!standingsEditing) renderStandings();
 });
+
+/* ============================================================
+   Live team map — shared positions + SCORE course overlay
+   ============================================================ */
+
+var lmap = null, lmapInited = false;
+var lmCourseBounds = null;
+var lmMarkers = {};          // deviceId -> {marker, data}
+var lmWatchId = null, lmLastWrite = 0, lmLastPos = null;
+var LM_WRITE_MIN_MS = 30000; // min interval between position writes
+var LM_HEARTBEAT_MS = 90000; // write even when parked, this often
+var LM_MOVE_MIN_M = 30;      // or after moving this far
+var LM_STALE_MS = 10 * 60 * 1000;   // fade after 10 min silent
+var LM_DEAD_MS = 12 * 60 * 60 * 1000; // hide after 12 h
+
+var DEVICE_ID = (function () {
+  try {
+    var id = localStorage.getItem("pch_dev");
+    if (!id) { id = "d" + Date.now().toString(36) + Math.floor(Math.random() * 1e6); localStorage.setItem("pch_dev", id); }
+    return id;
+  } catch (e) { return "d" + Math.floor(Math.random() * 1e9); }
+})();
+var LM_COLORS = ["#cdea1d", "#4dd2ff", "#ff9d4d", "#ff6b9d", "#9d7bff", "#5dffb0", "#ffd54d", "#ff7b6b"];
+function deviceColor(id) {
+  if (id === DEVICE_ID) return "#cdea1d";
+  var h = 0;
+  for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return LM_COLORS[1 + (h % (LM_COLORS.length - 1))];
+}
+
+function initMap() {
+  if (lmapInited || !window.L) return;
+  lmapInited = true;
+  $("liveMap").innerHTML = "";
+  var streets = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19, attribution: "© OpenStreetMap" });
+  var sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Imagery © Esri" });
+  lmap = L.map("liveMap", { layers: [streets] }).setView([31.4, -116.2], 8);
+  lmap.attributionControl.setPrefix(false);
+  loadCourseOverlay({ "Streets": streets, "Satellite": sat });
+  Store.watchDoc("livemap", renderDevices);
+  setInterval(function () { if (lmap) renderDeviceList(); }, 30000); // keep ages fresh
+}
+
+/* ----- course overlay parsed from the official SCORE KML ----- */
+function loadCourseOverlay(baseLayers) {
+  fetch("gps/26B4H-PRERUN-PROC-0827.kml")
+    .then(function (r) { return r.text(); })
+    .then(function (txt) {
+      var xml = new DOMParser().parseFromString(txt, "text/xml");
+      var canvas = L.canvas({ padding: 0.3 });
+
+      function folderByName(want) {
+        var folders = xml.getElementsByTagName("Folder");
+        for (var i = 0; i < folders.length; i++) {
+          for (var c = 0; c < folders[i].childNodes.length; c++) {
+            var n = folders[i].childNodes[c];
+            if (n.nodeName === "name" && n.textContent.trim() === want) return folders[i];
+          }
+        }
+        return null;
+      }
+      function coordPairs(text) {
+        return text.trim().split(/\s+/).map(function (t) {
+          var p = t.split(",");
+          return [parseFloat(p[1]), parseFloat(p[0])]; // KML is lon,lat
+        }).filter(function (ll) { return isFinite(ll[0]) && isFinite(ll[1]); });
+      }
+      function pointLayer(folderName, color, radius) {
+        var group = L.layerGroup();
+        var f = folderByName(folderName);
+        if (!f) return group;
+        var pms = f.getElementsByTagName("Placemark");
+        for (var i = 0; i < pms.length; i++) {
+          var nameEl = pms[i].getElementsByTagName("name")[0];
+          var coordEl = pms[i].getElementsByTagName("coordinates")[0];
+          if (!coordEl) continue;
+          var ll = coordPairs(coordEl.textContent)[0];
+          if (!ll) continue;
+          L.circleMarker(ll, { renderer: canvas, radius: radius, color: color, weight: 2, fillColor: color, fillOpacity: 0.7 })
+            .bindTooltip(nameEl ? nameEl.textContent.trim() : "", { direction: "top" })
+            .addTo(group);
+        }
+        return group;
+      }
+
+      // course lines (segments S1–S5 live in the RACE folder)
+      var course = L.layerGroup();
+      var raceFolder = folderByName("RACE");
+      var allPts = [];
+      if (raceFolder) {
+        var lines = raceFolder.getElementsByTagName("LineString");
+        for (var i = 0; i < lines.length; i++) {
+          var coordEl = lines[i].getElementsByTagName("coordinates")[0];
+          if (!coordEl) continue;
+          var pts = coordPairs(coordEl.textContent);
+          allPts = allPts.concat(pts);
+          L.polyline(pts, { renderer: canvas, color: "#e5262d", weight: 3, opacity: 0.9 }).addTo(course);
+        }
+      }
+      var rm = pointLayer("RCML", "#f4f7fa", 4);
+      var danger = pointLayer("DNGR", "#ff4444", 5);
+      var sz = pointLayer("SPZN", "#ffd54d", 4);
+      var prerun = pointLayer("PRUN", "#4dd2ff", 4);
+
+      course.addTo(lmap);
+      rm.addTo(lmap);
+      L.control.layers(baseLayers, {
+        "Race course": course, "Race miles": rm, "Dangers": danger,
+        "Speed zones": sz, "Pre-run stops": prerun
+      }, { collapsed: true }).addTo(lmap);
+
+      if (allPts.length) {
+        lmCourseBounds = L.latLngBounds(allPts);
+        lmap.fitBounds(lmCourseBounds, { padding: [20, 20] });
+      }
+      console.log("course overlay: " + (raceFolder ? raceFolder.getElementsByTagName("LineString").length : 0) +
+        " segments, " + allPts.length + " track pts, RM " + rm.getLayers().length +
+        ", danger " + danger.getLayers().length + ", SZ " + sz.getLayers().length +
+        ", pre-run " + prerun.getLayers().length);
+    })
+    .catch(function (e) { console.warn("course overlay failed", e); });
+}
+
+/* ----- rendering shared device positions ----- */
+function renderDevices(doc) {
+  if (!lmap) return;
+  var now = Date.now();
+  var seen = {};
+  Object.keys(doc || {}).forEach(function (id) {
+    var d = doc[id];
+    if (!d || !isFinite(d.lat) || !isFinite(d.lng)) return;
+    if (now - (d.ts || 0) > LM_DEAD_MS) return;
+    seen[id] = true;
+    var stale = now - (d.ts || 0) > LM_STALE_MS;
+    var color = deviceColor(id);
+    var opts = { radius: 9, color: "#0a1420", weight: 2, fillColor: color, fillOpacity: stale ? 0.35 : 0.95 };
+    if (!lmMarkers[id]) {
+      var m = L.circleMarker([d.lat, d.lng], opts).addTo(lmap);
+      m.bindTooltip("", { permanent: true, direction: "top", offset: [0, -8], className: "dev-tip" });
+      lmMarkers[id] = { marker: m };
+    }
+    var mk = lmMarkers[id].marker;
+    mk.setLatLng([d.lat, d.lng]);
+    mk.setStyle(opts);
+    mk.setTooltipContent(esc(d.name || "?") + (id === DEVICE_ID ? " (you)" : ""));
+    lmMarkers[id].data = d;
+  });
+  Object.keys(lmMarkers).forEach(function (id) {
+    if (!seen[id]) { lmap.removeLayer(lmMarkers[id].marker); delete lmMarkers[id]; }
+  });
+  renderDeviceList();
+}
+
+function renderDeviceList() {
+  var now = Date.now();
+  var ids = Object.keys(lmMarkers);
+  $("deviceList").innerHTML = ids.length ? ids.map(function (id) {
+    var d = lmMarkers[id].data || {};
+    var age = Math.round((now - (d.ts || 0)) / 60000);
+    var ageTxt = age < 1 ? "just now" : age + " min ago";
+    var spd = isFinite(d.spd) && d.spd > 0.5 ? " · " + Math.round(d.spd * 2.23694) + " mph" : "";
+    return '<button class="dev-row" data-dev="' + esc(id) + '">' +
+      '<span class="dev-dot" style="background:' + deviceColor(id) + '"></span>' +
+      '<span class="dev-name">' + esc(d.name || "?") + (id === DEVICE_ID ? " (you)" : "") + "</span>" +
+      '<span class="dev-meta">' + ageTxt + spd + "</span></button>";
+  }).join("") : '<p class="muted">Nobody is sharing yet — hit “Share my location”.</p>';
+  $("deviceList").querySelectorAll("[data-dev]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var mk = lmMarkers[el.dataset.dev];
+      if (mk) { lmap.setView(mk.marker.getLatLng(), Math.max(lmap.getZoom(), 13)); }
+    });
+  });
+}
+
+/* ----- sharing my location ----- */
+function lmWrite(pos, force) {
+  var now = Date.now();
+  var moved = lmLastPos ? lmap.distance([lmLastPos.lat, lmLastPos.lng], [pos.lat, pos.lng]) : Infinity;
+  if (!force) {
+    if (now - lmLastWrite < LM_WRITE_MIN_MS) return;
+    if (moved < LM_MOVE_MIN_M && now - lmLastWrite < LM_HEARTBEAT_MS) return;
+  }
+  lmLastWrite = now; lmLastPos = pos;
+  var payload = {};
+  payload[DEVICE_ID] = {
+    name: localStorage.getItem("pch_name") || "?",
+    lat: pos.lat, lng: pos.lng, acc: pos.acc || 0,
+    spd: pos.spd || 0, ts: now
+  };
+  Store.mergeDoc("livemap", payload);
+}
+
+function startSharing() {
+  if (!navigator.geolocation) { alert("This device doesn't expose GPS to the browser."); return; }
+  var name = getName(false);
+  if (!name) return;
+  lmWatchId = navigator.geolocation.watchPosition(function (p) {
+    lmWrite({ lat: p.coords.latitude, lng: p.coords.longitude,
+      acc: p.coords.accuracy, spd: p.coords.speed }, lmLastWrite === 0);
+  }, function (err) {
+    alert("Location error: " + err.message + (err.code === 1 ? " — allow location access for this site." : ""));
+    stopSharing();
+  }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+  $("shareLoc").textContent = "⏹ Stop sharing";
+  $("shareLoc").classList.add("sharing");
+}
+function stopSharing() {
+  if (lmWatchId !== null) { navigator.geolocation.clearWatch(lmWatchId); lmWatchId = null; }
+  var payload = {};
+  payload[DEVICE_ID] = Store.deleteField();
+  Store.mergeDoc("livemap", payload);
+  lmLastWrite = 0; lmLastPos = null;
+  $("shareLoc").textContent = "📍 Share my location";
+  $("shareLoc").classList.remove("sharing");
+}
+$("shareLoc").addEventListener("click", function () {
+  if (lmWatchId === null) startSharing(); else stopSharing();
+});
+window.addEventListener("beforeunload", function () {
+  // best-effort: drop off the map when the page closes mid-share
+  if (lmWatchId !== null) stopSharing();
+});
+$("fitTeam").addEventListener("click", function () {
+  var pts = Object.keys(lmMarkers).map(function (id) { return lmMarkers[id].marker.getLatLng(); });
+  if (pts.length) lmap.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 14 });
+});
+$("fitCourse").addEventListener("click", function () {
+  if (lmCourseBounds) lmap.fitBounds(lmCourseBounds, { padding: [20, 20] });
+});
+setSyncNote("mapSyncNote");
 
 /* ============================================================
    Pits & Fuel — pit plan where every pit carries its own
