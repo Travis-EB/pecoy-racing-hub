@@ -31,8 +31,7 @@
 <nav class="tab-bar" id="tabBar">
   <button class="tab active" data-tab="home">Home</button>
   <button class="tab" data-tab="live">Live</button>
-  <button class="tab" data-tab="pits">Pit Strategy</button>
-  <button class="tab" data-tab="fuel">Fuel Calc</button>
+  <button class="tab" data-tab="pits">Pits &amp; Fuel</button>
   <button class="tab" data-tab="gps">GPS Files</button>
   <button class="tab" data-tab="chat">Team Chat</button>
   <button class="tab" data-tab="season">Season</button>
@@ -116,54 +115,19 @@
   </div>
 </section>
 
-<!-- ============ PIT STRATEGY ============ -->
+<!-- ============ PITS & FUEL ============ -->
 <section class="panel" id="tab-pits">
   <div class="card">
     <div class="section-head">
-      <div class="card-label">Pit Strategy</div>
-      <select id="pitRaceSelect" class="race-select">
-        <option value="baja400">Baja 400 &mdash; Sep 2026</option>
-        <option value="baja1000">Baja 1000 &mdash; Nov 2026</option>
-      </select>
-    </div>
-    <div id="pitSyncNote" class="sync-note"></div>
-    <div class="table-scroll">
-      <table class="data-table" id="pitTable">
-        <thead>
-          <tr><th>Pit</th><th>Race Mile</th><th>Fuel (gal)</th><th>Crew / Chase</th><th>Notes</th><th></th></tr>
-        </thead>
-        <tbody id="pitTableBody"></tbody>
-      </table>
-    </div>
-    <div class="link-row">
-      <button class="btn" id="pitAddRow">+ Add Pit</button>
-      <button class="btn btn-ghost" id="pitSave">Save Plan</button>
-    </div>
-    <p class="muted">Everyone on the team sees the same plan once saved. Fuel cell: <strong>89 usable gallons</strong>.</p>
-  </div>
-</section>
-
-<!-- ============ FUEL CALC ============ -->
-<section class="panel" id="tab-fuel">
-  <div class="card">
-    <div class="section-head">
-      <div class="card-label">Fuel Economy Calculator</div>
+      <div class="card-label">Pit Strategy &amp; Fuel</div>
       <select id="fuelRaceSelect" class="race-select">
         <option value="baja400">Baja 400</option>
         <option value="baja1000">Baja 1000</option>
         <option value="practice">Practice / Test</option>
       </select>
     </div>
-    <p class="muted">Log each pit: <strong>race mile</strong> + <strong>gallons the truck took</strong>. Assumes fill-to-full every stop &mdash; gallons taken = gallons burned since the last fill. Cell holds <strong>89 usable gallons</strong>, full at the start line (mile 0).</p>
-    <div id="fuelSyncNote" class="sync-note"></div>
-
-    <div class="fuel-entry">
-      <div class="field"><label>Race mile at pit</label><input type="number" id="fuelMile" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 118"></div>
-      <div class="field"><label>Gallons taken</label><input type="number" id="fuelGallons" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 32.5"></div>
-      <div class="field"><label>Speed-zone mi <span class="opt">(this leg)</span></label><input type="number" id="fuelSz" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 14"></div>
-      <div class="field grow"><label>Note (optional)</label><input type="text" id="fuelNote" placeholder="BFG Pit 1, driver swap, etc."></div>
-      <button class="btn" id="fuelAdd">Log Pit</button>
-    </div>
+    <div id="pitSyncNote" class="sync-note"></div>
+    <p class="muted">Plan each pit before the race &mdash; mile, fuel, crew. On race day, open the pit and log <strong>gallons taken</strong> + <strong>speed-zone miles</strong>; every number below updates live for the whole team. Cell: <strong>89 usable gallons</strong>, fill-to-full assumed.</p>
 
     <div class="stat-row" id="fuelStats">
       <div class="stat"><span class="stat-val" id="statAvgMpg">&ndash;</span><label>blended mi/gal</label></div>
@@ -179,14 +143,10 @@
       <div class="field"><label>Speed-zone miles on the whole course <span class="opt">(optional)</span></label><input type="number" id="courseSz" inputmode="decimal" min="0" step="1" placeholder="e.g. 55"></div>
     </div>
     <div class="projection" id="fuelProjection"></div>
-
-    <div class="table-scroll">
-      <table class="data-table" id="fuelTable">
-        <thead><tr><th>#</th><th>Mile</th><th>Leg (mi)</th><th>Race mi</th><th>SZ mi</th><th>Gal</th><th>mi/gal</th><th>Note</th><th></th></tr></thead>
-        <tbody id="fuelTableBody"></tbody>
-      </table>
-    </div>
   </div>
+
+  <div id="pitCards"></div>
+  <div class="link-row" style="margin-bottom:14px"><button class="btn" id="pitAddRow">+ Add Pit</button></div>
 
   <div class="card">
     <div class="card-label">Fuel On Board Right Now</div>

@@ -223,6 +223,17 @@ var Store = {
     this._localSet("doc:" + name, obj);
     return Promise.resolve();
   },
+  getList: function (name) { // one-shot list read (used for migration)
+    if (this.connected) {
+      return this.db.collection(name).orderBy("ts", "asc").limit(500).get()
+        .then(function (snap) {
+          var items = [];
+          snap.forEach(function (d) { var x = d.data(); x.id = d.id; items.push(x); });
+          return items;
+        }).catch(function () { return []; });
+    }
+    return Promise.resolve(this._localGet(name, []));
+  },
   getDoc: function (name) { // one-shot read (used for on-demand file content)
     if (this.connected) {
       return this.db.collection("docs").doc(name).get()
@@ -376,101 +387,57 @@ Store.watchDoc("standings", function (doc) {
 });
 
 /* ============================================================
-   Pit strategy
+   Pits & Fuel — pit plan where every pit carries its own
+   fuel drilldown (planned leg burn + actuals logged race day)
    ============================================================ */
 
-var pitRows = [];
-var pitRace = "baja400";
+var pfRace = "baja400";
+var pfState = null;   // { rows: [{id, mile, gal, crew, notes, sz, actualGal}] }
+var pfOpen = {};      // which pit drilldowns are expanded, by row id
+var pfMigrating = false;
 
-function pitDocName() { return "pitplan_" + pitRace; }
+function pfDocName() { return "pitfuel_" + pfRace; }
+function pfNewRow() {
+  return { id: "p" + Date.now().toString(36) + Math.floor(Math.random() * 1e4),
+    mile: "", gal: "", crew: "", notes: "", sz: "", actualGal: "" };
+}
+function pfSave() { Store.setDoc(pfDocName(), pfState); }
 
-function renderPitTable() {
-  var body = $("pitTableBody");
-  if (!pitRows.length) pitRows = [{ mile: "", gal: "", crew: "", notes: "" }];
-  body.innerHTML = pitRows.map(function (r, i) {
-    return "<tr data-i='" + i + "'>" +
-      "<td>" + (i + 1) + "</td>" +
-      '<td><input type="number" inputmode="decimal" value="' + esc(r.mile) + '" data-f="mile" placeholder="mile"></td>' +
-      '<td><input type="number" inputmode="decimal" value="' + esc(r.gal) + '" data-f="gal" placeholder="gal"></td>' +
-      '<td><input value="' + esc(r.crew) + '" data-f="crew" placeholder="crew / chase"></td>' +
-      '<td><input value="' + esc(r.notes) + '" data-f="notes" placeholder="notes"></td>' +
-      '<td><button class="btn btn-ghost btn-small" data-del="' + i + '">✕</button></td></tr>';
-  }).join("");
-  body.querySelectorAll("[data-del]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      collectPitInputs();
-      pitRows.splice(Number(btn.dataset.del), 1);
-      renderPitTable();
-    });
+// rows sorted by planned mile; blank miles sink to the bottom
+function pfRows() {
+  if (!pfState || !pfState.rows) return [];
+  return pfState.rows.slice().sort(function (a, b) {
+    var am = parseFloat(a.mile), bm = parseFloat(b.mile);
+    if (!isFinite(am) && !isFinite(bm)) return 0;
+    if (!isFinite(am)) return 1;
+    if (!isFinite(bm)) return -1;
+    return am - bm;
   });
 }
-function collectPitInputs() {
-  var rows = $("pitTableBody").querySelectorAll("tr[data-i]");
-  var out = [];
-  rows.forEach(function (tr) {
-    var r = {};
-    tr.querySelectorAll("input").forEach(function (inp) { r[inp.dataset.f] = inp.value; });
-    out.push(r);
-  });
-  pitRows = out;
-}
-$("pitAddRow").addEventListener("click", function () {
-  collectPitInputs();
-  pitRows.push({ mile: "", gal: "", crew: "", notes: "" });
-  renderPitTable();
-});
-$("pitSave").addEventListener("click", function () {
-  collectPitInputs();
-  Store.setDoc(pitDocName(), { rows: pitRows, updated: Date.now() });
-  this.textContent = "Saved ✓";
-  var b = this;
-  setTimeout(function () { b.textContent = "Save Plan"; }, 1500);
-});
-function watchPitPlan() {
-  Store.watchDoc(pitDocName(), function (doc) {
-    pitRows = (doc && doc.rows) ? doc.rows : [];
-    renderPitTable();
-  });
-}
-$("pitRaceSelect").addEventListener("change", function () {
-  pitRace = this.value;
-  watchPitPlan();
-});
-watchPitPlan();
-setSyncNote("pitSyncNote");
 
-/* ============================================================
-   Fuel calculator
-   ============================================================ */
-
-var fuelRace = "baja400";
-var fuelEntries = [];
-
-function fuelListName() { return "fuel_" + fuelRace; }
-
-function sortedFuel() {
-  return fuelEntries.slice().sort(function (a, b) { return Number(a.mile) - Number(b.mile); });
-}
-
+/* ----- actuals: a fuel leg runs from the last pit that TOOK fuel,
+   so a pit passed without fueling rolls its miles (and SZ miles)
+   into the next fill's leg ----- */
 function fuelStats() {
-  var entries = sortedFuel();
-  var prev = 0, totalGal = 0, lastMpg = NaN, legs = [], totalSz = 0;
-  entries.forEach(function (e) {
-    var mile = Number(e.mile), gal = Number(e.gallons);
-    var dist = mile - prev;
-    var sz = Math.min(Math.max(Number(e.sz) || 0, 0), Math.max(dist, 0)); // SZ can't exceed the leg
-    var race = dist - sz;
-    var mpg = gal > 0 ? dist / gal : NaN;
-    legs.push({ entry: e, mile: mile, dist: dist, sz: sz, race: race, gal: gal, mpg: mpg });
-    totalGal += gal;
-    totalSz += sz;
-    prev = mile;
-    if (isFinite(mpg)) lastMpg = mpg;
+  var rows = pfRows();
+  var lastFill = 0, szAccum = 0, totalGal = 0, lastMpg = NaN, legs = [], totalSz = 0, totalMiles = 0;
+  rows.forEach(function (r) {
+    var mile = parseFloat(r.mile), gal = parseFloat(r.actualGal), sz = parseFloat(r.sz) || 0;
+    if (!isFinite(mile)) return;
+    szAccum += Math.max(0, sz);
+    if (isFinite(gal) && gal > 0) {
+      var dist = mile - lastFill;
+      var szLeg = Math.min(szAccum, Math.max(dist, 0));
+      var mpg = dist > 0 ? dist / gal : NaN;
+      legs.push({ row: r, mile: mile, dist: dist, sz: szLeg, race: dist - szLeg, gal: gal, mpg: mpg });
+      totalGal += gal; totalSz += szLeg; totalMiles = mile;
+      if (isFinite(mpg)) lastMpg = mpg;
+      lastFill = mile; szAccum = 0;
+    }
   });
-  var totalMiles = entries.length ? Number(entries[entries.length - 1].mile) : 0;
   var avgMpg = totalGal > 0 ? totalMiles / totalGal : NaN;
   var s = { legs: legs, totalGal: totalGal, totalMiles: totalMiles, totalSz: totalSz,
-            avgMpg: avgMpg, lastMpg: lastMpg };
+            avgMpg: avgMpg, lastMpg: lastMpg, lastFill: lastFill };
   var split = solveSplit(legs);
   s.racePace = split.racePace;
   s.szPace = split.szPace;
@@ -509,14 +476,14 @@ function solveSplit(legs) {
 
 var SPLIT_MESSAGES = {
   none: "",
-  need2: "Log a second pit with speed-zone miles to separate race pace from speed-zone pace.",
-  nosz: "Add speed-zone miles to your pit entries and the calculator will split race pace from speed-zone pace.",
+  need2: "Log a second fuel stop with speed-zone miles to separate race pace from speed-zone pace.",
+  nosz: "Add speed-zone miles to your pits and the calculator will split race pace from speed-zone pace.",
   degenerate: "Every leg has the same speed-zone mix, so the two rates can't be separated yet — they'll split once a leg differs.",
   unstable: "Not enough spread in the data yet to separate the two rates reliably.",
   noisy: "The split came out with speed zones burning more than race pace — that's almost certainly noise in a small sample, so only the blended number is shown."
 };
 
-function renderFuel() {
+function renderPf() {
   var s = fuelStats();
   $("statAvgMpg").textContent = fmt(s.avgMpg);
   $("statLastMpg").textContent = fmt(s.lastMpg);
@@ -532,27 +499,130 @@ function renderFuel() {
       " mi/gal) across " + fmt(s.totalSz, 0) + " speed-zone miles logged."
     : (SPLIT_MESSAGES[s.splitStatus] || "");
 
-  $("fuelTableBody").innerHTML = s.legs.map(function (l, i) {
-    return "<tr><td>" + (i + 1) + "</td><td>" + fmt(l.mile, 1) + "</td><td>" + fmt(l.dist, 1) +
-      "</td><td>" + fmt(l.race, 1) + "</td><td>" + (l.sz > 0 ? fmt(l.sz, 1) : "<span class='muted'>–</span>") +
-      "</td><td>" + fmt(l.gal, 1) + "</td><td><strong>" + fmt(l.mpg) + "</strong></td><td>" +
-      esc(l.entry.note || "") + '</td><td><button class="btn btn-ghost btn-small" data-fdel="' +
-      esc(l.entry.id) + '">✕</button></td></tr>';
-  }).join("") || '<tr><td colspan="9" class="muted">No pits logged yet for this race.</td></tr>';
-
-  document.querySelectorAll("[data-fdel]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      Store.deleteItem(fuelListName(), btn.dataset.fdel);
-    });
-  });
+  renderPitCards(s);
   renderProjection(s);
   renderFob();
+}
+
+/* ----- one card per pit, with a fuel drilldown inside ----- */
+function renderPitCards(s) {
+  var rows = pfRows();
+  var manual = parseFloat($("fobMpg").value);
+  var fallbackMpg = isFinite(s.avgMpg) && s.avgMpg > 0 ? s.avgMpg
+    : (isFinite(manual) && manual > 0 ? manual : NaN);
+
+  var prevMile = 0;
+  $("pitCards").innerHTML = rows.map(function (r) {
+    var mile = parseFloat(r.mile), sz = Math.max(0, parseFloat(r.sz) || 0);
+    var legDist = isFinite(mile) ? Math.max(0, mile - prevMile) : NaN;
+    var szLeg = isFinite(legDist) ? Math.min(sz, legDist) : sz;
+    var raceLeg = isFinite(legDist) ? legDist - szLeg : NaN;
+
+    // projected burn for this planned leg (split rates when solved)
+    var proj = NaN, basis = "";
+    if (isFinite(legDist) && legDist > 0) {
+      if (s.splitStatus === "ok") {
+        proj = raceLeg / s.racePace + szLeg / s.szPace;
+        basis = fmt(s.racePace) + " race / " + fmt(s.szPace) + " SZ mi/gal";
+      } else if (isFinite(fallbackMpg)) {
+        proj = legDist / fallbackMpg;
+        basis = fmt(fallbackMpg) + " mi/gal blended";
+      }
+    }
+    var arrive = isFinite(proj) ? FUEL_CELL_GALLONS - proj : NaN;
+    var lowArrive = isFinite(arrive) && arrive < 10;
+
+    var actual = parseFloat(r.actualGal);
+    var logged = isFinite(actual) && actual > 0;
+    var leg = null;
+    for (var li = 0; li < s.legs.length; li++) if (s.legs[li].row.id === r.id) leg = s.legs[li];
+
+    // drilldown lines
+    var drill = "";
+    if (isFinite(mile)) {
+      drill += "<div>Leg: RM " + fmt(prevMile, 0) + " → RM " + fmt(mile, 0) + " — <strong>" +
+        fmt(legDist, 1) + " mi</strong>" +
+        (szLeg > 0 ? " (" + fmt(raceLeg, 1) + " race + " + fmt(szLeg, 1) + " SZ)" : "") + "</div>";
+      if (isFinite(proj)) {
+        var arriveTxt = arrive < 0
+          ? '<strong class="warn-txt">won’t make it — short by ~' + fmt(-arrive, 1) + " gal</strong> ⚠ split this leg"
+          : 'arrive with <strong class="' + (lowArrive ? "warn-txt" : "") + '">~' + fmt(arrive, 1) +
+            " gal (" + fmt(arrive / FUEL_CELL_GALLONS * 100, 0) + "%)</strong>" +
+            (lowArrive ? " ⚠ thin margin" : "");
+        drill += '<div>Projected burn: <strong>' + fmt(proj, 1) + " gal</strong> @ " + basis +
+          " → " + arriveTxt + "</div>";
+      } else {
+        drill += '<div class="muted">Log a fuel stop (or set an assumed mi/gal in Fuel On Board) to project this leg.</div>';
+      }
+      if (logged && leg) {
+        drill += "<div>Actual: <strong>" + fmt(leg.gal, 1) + " gal</strong> over " + fmt(leg.dist, 1) +
+          " mi since last fill → <strong>" + fmt(leg.mpg) + " mi/gal</strong>" +
+          (isFinite(proj) && Math.abs(leg.dist - legDist) < 0.01
+            ? " (Δ " + (leg.gal - proj >= 0 ? "+" : "") + fmt(leg.gal - proj, 1) + " gal vs plan)" : "") +
+          "</div>";
+      }
+    } else {
+      drill = '<div class="muted">Set a race mile to calculate this leg.</div>';
+    }
+
+    var chip = logged
+      ? '<span class="pit-chip logged">✓ ' + fmt(actual, 1) + " gal" +
+        (leg && isFinite(leg.mpg) ? " · " + fmt(leg.mpg) + " mi/gal" : "") + "</span>"
+      : '<span class="pit-chip">' + (r.gal ? esc(r.gal) + " gal planned" : "upcoming") + "</span>";
+
+    if (isFinite(mile)) prevMile = mile;
+
+    return '<details class="card pit-card" data-pid="' + r.id + '"' + (pfOpen[r.id] ? " open" : "") + ">" +
+      "<summary><span class='pit-mile'>" + (isFinite(mile) ? "RM " + fmt(mile, 0) : "RM —") + "</span>" +
+      '<span class="pit-crew">' + esc(r.crew || "") + "</span>" + chip + "</summary>" +
+      '<div class="pit-body">' +
+        '<div class="pit-grid">' +
+          '<div class="field"><label>Race mile</label><input type="number" inputmode="decimal" step="0.1" value="' + esc(r.mile) + '" data-pf="' + r.id + ':mile"></div>' +
+          '<div class="field"><label>Planned fuel (gal)</label><input type="number" inputmode="decimal" step="0.5" value="' + esc(r.gal) + '" data-pf="' + r.id + ':gal"></div>' +
+          '<div class="field"><label>Crew / chase</label><input type="text" value="' + esc(r.crew) + '" data-pf="' + r.id + ':crew"></div>' +
+          '<div class="field"><label>SZ mi in leg</label><input type="number" inputmode="decimal" step="0.1" value="' + esc(r.sz) + '" data-pf="' + r.id + ':sz"></div>' +
+          '<div class="field grow"><label>Notes</label><input type="text" value="' + esc(r.notes) + '" data-pf="' + r.id + ':notes" placeholder="splash only, driver swap, tires…"></div>' +
+        "</div>" +
+        '<div class="drill">' + drill + "</div>" +
+        '<div class="pit-grid actuals">' +
+          '<div class="field"><label>⛽ Gallons taken (race day)</label><input type="number" inputmode="decimal" step="0.1" value="' + esc(r.actualGal) + '" data-pf="' + r.id + ':actualGal" placeholder="log at the pit"></div>' +
+          '<button class="btn btn-ghost btn-small pit-del" data-pdel="' + r.id + '">✕ remove pit</button>' +
+        "</div>" +
+      "</div></details>";
+  }).join("") ||
+  '<div class="card"><p class="muted">No pits yet — hit “+ Add Pit” to start the plan for this race.</p></div>';
+
+  bindPfEvents();
+}
+
+function bindPfEvents() {
+  var root = $("pitCards");
+  root.querySelectorAll("[data-pf]").forEach(function (el) {
+    el.addEventListener("change", function () {
+      var p = el.dataset.pf.split(":");
+      var row = pfState.rows.filter(function (r) { return r.id === p[0]; })[0];
+      if (!row) return;
+      row[p[1]] = el.value;
+      pfSave(); renderPf();
+    });
+  });
+  root.querySelectorAll("[data-pdel]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      if (!confirm("Remove this pit?")) return;
+      pfState.rows = pfState.rows.filter(function (r) { return r.id !== el.dataset.pdel; });
+      delete pfOpen[el.dataset.pdel];
+      pfSave(); renderPf();
+    });
+  });
+  root.querySelectorAll("details.pit-card").forEach(function (el) {
+    el.addEventListener("toggle", function () { pfOpen[el.dataset.pid] = el.open; });
+  });
 }
 
 // Race-distance projection: what the whole race costs at the pace we're seeing.
 function renderProjection(s) {
   var el = $("fuelProjection");
-  var dist = RACE_DISTANCE[fuelRace];
+  var dist = RACE_DISTANCE[pfRace];
   if (!dist) { el.innerHTML = ""; return; }
   if (!isFinite(s.avgMpg) || s.avgMpg <= 0) {
     el.innerHTML = "<strong>" + dist + " mi</strong> race distance. Log a pit to project total fuel needed.";
@@ -587,32 +657,67 @@ function renderProjection(s) {
 }
 $("courseSz").addEventListener("input", function () { renderProjection(fuelStats()); });
 
-$("fuelAdd").addEventListener("click", function () {
-  var mile = parseFloat($("fuelMile").value);
-  var gal = parseFloat($("fuelGallons").value);
-  var sz = parseFloat($("fuelSz").value);
-  if (!isFinite(mile) || mile < 0) { $("fuelMile").focus(); return; }
-  if (!isFinite(gal) || gal <= 0) { $("fuelGallons").focus(); return; }
-  Store.addItem(fuelListName(), {
-    mile: mile, gallons: gal,
-    sz: isFinite(sz) && sz > 0 ? sz : 0,
-    note: $("fuelNote").value.trim()
-  });
-  ["fuelMile", "fuelGallons", "fuelSz", "fuelNote"].forEach(function (id) { $(id).value = ""; });
+/* ----- add / watch / migrate ----- */
+$("pitAddRow").addEventListener("click", function () {
+  if (!pfState) pfState = { rows: [] };
+  var row = pfNewRow();
+  pfState.rows.push(row);
+  pfOpen[row.id] = true;
+  pfSave(); renderPf();
 });
 
-function watchFuel() {
-  Store.watchList(fuelListName(), function (items) {
-    fuelEntries = items;
-    renderFuel();
+function watchPf() {
+  var race = pfRace;
+  Store.watchDoc(pfDocName(), function (doc) {
+    if (race !== pfRace) return; // stale watcher after a race switch
+    if (doc && doc.rows) {
+      pfState = doc;
+      renderPf();
+    } else if (!pfMigrating) {
+      // first open for this race: pull in any data from the old
+      // pit-plan doc and fuel-log collection (pre-merge format)
+      pfMigrating = true;
+      migratePf(race).then(function (state) {
+        pfMigrating = false;
+        if (race !== pfRace) return;
+        pfState = state;
+        pfSave();
+        renderPf();
+      });
+    }
+  });
+}
+function migratePf(race) {
+  return Promise.all([
+    Store.getDoc("pitplan_" + race),
+    Store.getList("fuel_" + race)
+  ]).then(function (res) {
+    var rows = [];
+    ((res[0] && res[0].rows) || []).forEach(function (r) {
+      if (!(r.mile || r.gal || r.crew || r.notes)) return;
+      var nr = pfNewRow();
+      nr.mile = r.mile; nr.gal = r.gal; nr.crew = r.crew || ""; nr.notes = r.notes || "";
+      rows.push(nr);
+    });
+    (res[1] || []).forEach(function (e) {
+      var m = parseFloat(e.mile);
+      var match = rows.filter(function (r) { return Math.abs(parseFloat(r.mile) - m) <= 0.5; })[0];
+      if (!match) { match = pfNewRow(); match.mile = e.mile; rows.push(match); }
+      match.actualGal = e.gallons;
+      if (e.sz) match.sz = e.sz;
+      if (e.note && !match.notes) match.notes = e.note;
+    });
+    return { rows: rows };
   });
 }
 $("fuelRaceSelect").addEventListener("change", function () {
-  fuelRace = this.value;
-  watchFuel();
+  pfRace = this.value;
+  pfState = null;
+  $("pitCards").innerHTML = '<div class="card"><p class="muted">Loading…</p></div>';
+  watchPf();
 });
-watchFuel();
-setSyncNote("fuelSyncNote");
+watchPf();
+setSyncNote("pitSyncNote");
 
 /* ----- fuel on board ----- */
 function renderFob() {
@@ -650,6 +755,8 @@ function renderFob() {
 }
 $("fobMile").addEventListener("input", renderFob);
 $("fobMpg").addEventListener("input", renderFob);
+// assumed mi/gal also feeds the per-pit projections
+$("fobMpg").addEventListener("change", function () { renderPf(); });
 
 /* ============================================================
    GPS files

@@ -234,6 +234,41 @@ input::placeholder { color: var(--gray-dark); }
 .projection strong { color: var(--volt); }
 .projection .muted { font-size: 0.85rem; }
 
+/* ---------- pit cards ---------- */
+.pit-card { padding: 0; overflow: hidden; }
+.pit-card summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px;
+}
+.pit-card summary::-webkit-details-marker { display: none; }
+.pit-card summary::after {
+  content: "▾"; margin-left: auto; color: var(--gray-dark); transition: transform 0.15s;
+}
+.pit-card[open] summary::after { transform: rotate(180deg); }
+.pit-card[open] summary { border-bottom: 1px solid var(--navy-700); }
+.pit-mile { font-weight: 800; font-style: italic; font-size: 1.02rem; min-width: 74px; }
+.pit-crew { color: var(--gray); font-size: 0.88rem; }
+.pit-chip {
+  background: var(--navy-700); color: var(--gray); border-radius: 999px;
+  padding: 3px 12px; font-size: 0.78rem; font-weight: 700;
+}
+.pit-chip.logged { background: rgba(205, 234, 29, 0.15); color: var(--volt); }
+.pit-body { padding: 14px 18px 16px; }
+.pit-grid { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.pit-grid .field input { width: 120px; }
+.pit-grid .field.grow { flex: 1 1 220px; }
+.pit-grid .field.grow input { width: 100%; }
+.pit-grid.actuals { margin-top: 12px; }
+.pit-grid.actuals .field input { width: 180px; border-color: var(--volt-dim); }
+.pit-del { margin-left: auto; }
+.drill {
+  background: var(--navy-950); border: 1px solid var(--navy-700); border-radius: 8px;
+  padding: 10px 14px; margin-top: 12px; font-size: 0.9rem; line-height: 1.65;
+}
+.drill strong { color: var(--volt); }
+.drill strong.warn-txt, .warn-txt { color: var(--red); }
+
 .fuel-gauge {
   height: 22px; background: var(--navy-800);
   border: 1px solid var(--navy-700); border-radius: 999px;
