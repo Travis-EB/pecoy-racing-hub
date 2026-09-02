@@ -27,6 +27,27 @@ body {
   flex-direction: column;
 }
 
+/* ---------- lock screen ---------- */
+.lock-screen {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--navy-950);
+  background-image: radial-gradient(ellipse 120% 60% at 50% -10%, #16304a 0%, var(--navy-950) 60%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+  padding: 20px;
+}
+.lock-screen[hidden] { display: none; }
+.lock-logo { max-width: 320px; width: 82%; height: auto; }
+.lock-box {
+  display: flex; flex-direction: column; gap: 10px;
+  width: 100%; max-width: 300px;
+}
+.lock-box label {
+  color: var(--gray); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.14em; text-align: center;
+}
+.lock-box input { text-align: center; font-size: 1.1rem; }
+.lock-err { color: var(--red); font-size: 0.85rem; text-align: center; min-height: 1.2em; }
+
 /* ---------- header ---------- */
 .site-header { text-align: center; padding: 20px 16px 6px; }
 .logo { max-width: 340px; width: 80%; height: auto; filter: drop-shadow(0 6px 24px rgba(205, 234, 29, 0.12)); }
@@ -155,7 +176,7 @@ code { background: var(--navy-800); padding: 1px 6px; border-radius: 4px; font-s
 /* ---------- forms ---------- */
 .inline-form { display: flex; gap: 8px; margin-top: 10px; }
 .inline-form input { flex: 1; }
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], input[type="password"] {
   background: var(--navy-800); color: var(--white);
   border: 1px solid var(--navy-700); border-radius: 8px;
   padding: 10px 12px; font: inherit; font-size: 0.95rem;

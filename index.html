@@ -10,6 +10,16 @@
 </head>
 <body>
 
+<div id="lockScreen" class="lock-screen" hidden>
+  <img src="assets/logo.png" alt="PeCoy Racing" class="lock-logo">
+  <div class="lock-box">
+    <label for="lockInput">Team Password</label>
+    <input type="password" id="lockInput" autocomplete="current-password" placeholder="password">
+    <button class="btn" id="lockEnter">Enter the Pits</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
 <header class="site-header">
   <img src="assets/logo.png" alt="PeCoy Racing — Travis PeCoy / Tyler Brown" class="logo">
   <div class="header-sub">

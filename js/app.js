@@ -8,6 +8,41 @@
 
 var FUEL_CELL_GALLONS = 89; // usable
 
+/* ---------------- team password gate ----------------
+   Client-side gate: keeps the hub off-limits to anyone who stumbles on the
+   URL. Only the SHA-256 of the password lives in this (public) file. */
+var PASS_HASH = "aa23b479b3e4fb8547c016ffc893e0479acde6b193a04d37a80f7cc3e4897901";
+
+function sha256Hex(str) {
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function (buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+      return b.toString(16).padStart(2, "0");
+    }).join("");
+  });
+}
+(function initLock() {
+  var lock = document.getElementById("lockScreen");
+  var stored = null;
+  try { stored = localStorage.getItem("pch_pass"); } catch (e) {}
+  if (stored === PASS_HASH) return; // already unlocked on this device
+  lock.hidden = false;
+  var input = document.getElementById("lockInput");
+  var tryUnlock = function () {
+    sha256Hex(input.value.trim()).then(function (h) {
+      if (h === PASS_HASH) {
+        try { localStorage.setItem("pch_pass", h); } catch (e) {}
+        lock.hidden = true;
+      } else {
+        document.getElementById("lockErr").textContent = "Wrong password — ask Travis.";
+        input.value = "";
+        input.focus();
+      }
+    });
+  };
+  document.getElementById("lockEnter").addEventListener("click", tryUnlock);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+})();
+
 /* ---------------- verified 2026 season data ---------------- */
 
 var RESULTS = {
@@ -812,16 +847,17 @@ function freshVehState() {
 }
 function saveVehState() { Store.setDoc("vehicles", vehState); }
 
-// exp is "YYYY-MM-DD" from a date input
-function expStatus(exp) {
-  if (!exp) return { cls: "gray", label: "no date set" };
-  var t = new Date(exp + "T23:59:59").getTime();
-  if (t < Date.now()) return { cls: "red", label: "EXPIRED " + exp };
-  if (t < BAJA1000_END) return { cls: "amber", label: "expires " + exp + " — before Baja 1000 ends" };
-  return { cls: "green", label: "valid thru " + exp };
+// d = {inv, exp, perm} — exp is "YYYY-MM-DD" from a date input
+function expStatus(d) {
+  if (d.perm) return { cls: "green", label: "permanent — no expiration" };
+  if (!d.exp) return { cls: "gray", label: "no date set" };
+  var t = new Date(d.exp + "T23:59:59").getTime();
+  if (t < Date.now()) return { cls: "red", label: "EXPIRED " + d.exp };
+  if (t < BAJA1000_END) return { cls: "amber", label: "expires " + d.exp + " — before Baja 1000 ends" };
+  return { cls: "green", label: "valid thru " + d.exp };
 }
 function docReady(d) {
-  var s = expStatus(d.exp);
+  var s = expStatus(d);
   return d.inv && s.cls !== "red" && s.cls !== "gray";
 }
 function vehReady(v) { return docReady(v.reg) && docReady(v.ins); }
@@ -836,7 +872,7 @@ function renderVehicles() {
   $("vehicleList").innerHTML = vehState.list.map(function (v) {
     var docsHtml = DOC_KINDS.map(function (k) {
       var kind = k[0], label = k[1], d = v[kind];
-      var st = expStatus(d.exp);
+      var st = expStatus(d);
       var files = (v.files || []).filter(function (f) { return f.kind === kind; });
       var filesHtml = files.map(function (f) {
         return '<span class="vfile">' +
@@ -848,7 +884,9 @@ function renderVehicles() {
         '<span class="exp-pill ' + st.cls + '">' + esc(st.label) + "</span></div>" +
         '<div class="vdoc-row">' +
           '<label class="chk"><input type="checkbox" data-vinv="' + v.id + ":" + kind + '"' + (d.inv ? " checked" : "") + "> in vehicle</label>" +
-          '<input type="date" data-vexp="' + v.id + ":" + kind + '" value="' + esc(d.exp) + '" title="expiration date">' +
+          (d.perm ? "" : '<input type="date" data-vexp="' + v.id + ":" + kind + '" value="' + esc(d.exp) + '" title="expiration date">') +
+          // permanent registrations (trailers, OHVs) never expire
+          (kind === "reg" ? '<label class="chk"><input type="checkbox" data-vperm="' + v.id + ":" + kind + '"' + (d.perm ? " checked" : "") + "> permanent</label>" : "") +
           '<label class="btn btn-ghost btn-small upload-btn">📷 upload' +
             '<input type="file" accept="image/*,application/pdf" data-vup="' + v.id + ":" + kind + '" hidden></label>' +
         "</div>" +
@@ -883,6 +921,13 @@ function bindVehicleEvents() {
     el.addEventListener("change", function () {
       var p = el.dataset.vexp.split(":");
       findVeh(p[0])[p[1]].exp = el.value;
+      saveVehState(); renderVehicles();
+    });
+  });
+  root.querySelectorAll("[data-vperm]").forEach(function (el) {
+    el.addEventListener("change", function () {
+      var p = el.dataset.vperm.split(":");
+      findVeh(p[0])[p[1]].perm = el.checked;
       saveVehState(); renderVehicles();
     });
   });

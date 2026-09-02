@@ -64,7 +64,10 @@ Do Part 1, then Part 2. About 15 minutes total.
    Click **Publish**.
 
 > Note: these rules let anyone who has the site URL read/write hub data.
-> That's the "open link" setup you chose — keep the URL within the team.
+> The site has a client-side team password gate (ask Travis for the password;
+> hash lives in js/app.js — to change the password, hash the new one with
+> SHA-256 and replace PASS_HASH). The gate stops casual visitors; it is not
+> cryptographic security, so still keep the URL within the team.
 
 ---
 
