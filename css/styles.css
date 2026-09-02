@@ -250,6 +250,12 @@ input::placeholder { color: var(--gray-dark); }
   font-weight: 700; font-size: 0.78rem; padding: 2px 8px;
 }
 .dev-tip::before { display: none; }
+.rm-label {
+  background: rgba(10, 20, 32, 0.78); color: #fff;
+  border: none; border-radius: 4px; box-shadow: none;
+  font-weight: 700; font-size: 0.7rem; padding: 1px 6px;
+}
+.rm-label::before { display: none; }
 .device-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .dev-row {
   display: flex; align-items: center; gap: 8px;

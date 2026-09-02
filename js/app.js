@@ -443,6 +443,7 @@ function initMap() {
     { maxZoom: 19, attribution: "Imagery © Esri" });
   lmap = L.map("liveMap", { layers: [streets] }).setView([31.4, -116.2], 8);
   lmap.attributionControl.setPrefix(false);
+  window._pchMap = lmap; // console access for field debugging
   loadCourseOverlay({ "Streets": streets, "Satellite": sat });
   Store.watchDoc("livemap", renderDevices);
   setInterval(function () { if (lmap) renderDeviceList(); }, 30000); // keep ages fresh
@@ -483,9 +484,10 @@ function loadCourseOverlay(baseLayers) {
           if (!coordEl) continue;
           var ll = coordPairs(coordEl.textContent)[0];
           if (!ll) continue;
-          L.circleMarker(ll, { renderer: canvas, radius: radius, color: color, weight: 2, fillColor: color, fillOpacity: 0.7 })
-            .bindTooltip(nameEl ? nameEl.textContent.trim() : "", { direction: "top" })
-            .addTo(group);
+          var mk = L.circleMarker(ll, { renderer: canvas, radius: radius, color: color, weight: 2, fillColor: color, fillOpacity: 0.7 });
+          mk._pchName = nameEl ? nameEl.textContent.trim() : "";
+          mk.bindTooltip(mk._pchName, { direction: "top" });
+          mk.addTo(group);
         }
         return group;
       }
@@ -511,6 +513,22 @@ function loadCourseOverlay(baseLayers) {
 
       course.addTo(lmap);
       rm.addTo(lmap);
+
+      // race-mile labels switch on when zoomed in enough to read them
+      var rmLabeled = null;
+      function updateRmLabels() {
+        var permanent = lmap.getZoom() >= 10;
+        if (permanent === rmLabeled) return;
+        rmLabeled = permanent;
+        rm.getLayers().forEach(function (m) {
+          m.unbindTooltip();
+          m.bindTooltip(m._pchName, permanent
+            ? { permanent: true, direction: "right", offset: [7, 0], className: "rm-label" }
+            : { direction: "top" });
+        });
+      }
+      lmap.on("zoomend", updateRmLabels);
+      updateRmLabels();
       L.control.layers(baseLayers, {
         "Race course": course, "Race miles": rm, "Dangers": danger,
         "Speed zones": sz, "Pre-run stops": prerun
