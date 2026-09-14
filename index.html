@@ -47,9 +47,9 @@
 <section class="panel active" id="tab-home">
   <div class="card countdown-card">
     <div class="card-label">Next Race</div>
-    <h2 class="race-title" id="nextRaceName">7th SCORE Baja 400</h2>
-    <div class="race-loc" id="nextRaceLoc">Ensenada, Baja California &middot; September 9&ndash;13, 2026<br>
-      <span class="muted">Single loop &middot; 423.16 mi &middot; 16-hour limit &middot; 4-wheel green flag Sat Sep 12, 10:00 AM</span></div>
+    <h2 class="race-title" id="nextRaceName">BFGoodrich 59th SCORE Baja 1000</h2>
+    <div class="race-loc" id="nextRaceLoc">Los Cabos, Baja California Sur &middot; November 9&ndash;15, 2026<br>
+      <span class="muted">Start &amp; finish in Los Cabos &middot; first all-Baja-Sur running &middot; green flag TBA (counting down to est. Sat Nov 14)</span></div>
     <div class="countdown" id="countdown">
       <div class="cd-unit"><span id="cdDays">--</span><label>days</label></div>
       <div class="cd-unit"><span id="cdHours">--</span><label>hrs</label></div>
@@ -61,17 +61,17 @@
   <div class="grid-2">
     <div class="card">
       <div class="card-label">Last Result</div>
-      <div class="big-result"><span class="pos-badge">P4</span> Baja 500</div>
-      <p class="muted">Travis Pecoy &middot; #212 &middot; 10:55:49.802<br>Trophy Truck Spec &middot; June 2026, Ensenada</p>
+      <div class="big-result"><span class="pos-badge">P7</span> Baja 400</div>
+      <p class="muted">Travis PeCoy &middot; #212 &middot; 9:47:13.983 corrected<br>Trophy Truck Spec &middot; Sep 12, 2026, Ensenada &middot; 29 starters</p>
     </div>
     <div class="card">
       <div class="card-label">Season So Far</div>
       <table class="mini-table">
         <tr><td>San Felipe 250</td><td class="right"><span class="pos-chip">P6</span></td></tr>
         <tr><td>Baja 500</td><td class="right"><span class="pos-chip">P4</span></td></tr>
-        <tr><td>Baja 400</td><td class="right muted">Sep 9&ndash;13</td></tr>
+        <tr><td>Baja 400</td><td class="right"><span class="pos-chip">P7</span></td></tr>
         <tr><td>Baja 1000</td><td class="right muted">Nov 9&ndash;15</td></tr>
-        <tr><td><strong>Championship</strong></td><td class="right"><span class="pos-chip">P5</span> <strong>234 pts</strong> <span class="muted">(&minus;10)</span></td></tr>
+        <tr><td><strong>Championship</strong></td><td class="right"><span class="pos-chip">P6</span> <strong>346 pts</strong> <span class="muted">(&minus;14, est.)</span></td></tr>
       </table>
     </div>
   </div>
@@ -233,7 +233,7 @@
         <tbody>
           <tr><td>1</td><td>King Shocks 39th San Felipe 250</td><td>Mar 25&ndash;29</td><td>San Felipe, BC</td><td><span class="pos-chip">P6</span></td></tr>
           <tr><td>2</td><td>BFGoodrich 58th Baja 500</td><td>Jun 3&ndash;7</td><td>Ensenada, BC</td><td><span class="pos-chip">P4</span></td></tr>
-          <tr class="upcoming"><td>3</td><td>7th SCORE Baja 400</td><td>Sep 9&ndash;13</td><td>Ensenada, BC</td><td class="muted">upcoming</td></tr>
+          <tr><td>3</td><td>7th SCORE Baja 400</td><td>Sep 9&ndash;13</td><td>Ensenada, BC</td><td><span class="pos-chip">P7</span></td></tr>
           <tr class="upcoming"><td>4</td><td>BFGoodrich 59th Baja 1000</td><td>Nov 9&ndash;15</td><td>Los Cabos, BCS</td><td class="muted">upcoming</td></tr>
         </tbody>
       </table>
@@ -246,7 +246,7 @@
       <div class="card-label">Trophy Truck Spec &mdash; Points Standings</div>
       <button class="btn btn-ghost btn-small" id="standingsEdit">Edit</button>
     </div>
-    <div class="banner" id="standingsBanner"><strong>#212 P5 in points &mdash; 234 pts, 10 back of the lead.</strong> Official SCORE points through Round 2 of 4 (Baja 500).</div>
+    <div class="banner" id="standingsBanner"><strong>#212 P6 in points &mdash; 346 pts, 14 back of the lead (tied on points with P5).</strong> Rounds 1&ndash;2 official; Round 3 (Baja 400) calculated from provisional results using SCORE&rsquo;s formula with estimated 40 start / 50 finish points &mdash; will be replaced by the official sheet when SCORE posts it.</div>
     <div class="table-scroll">
       <table class="data-table" id="standingsTable">
         <thead><tr><th>Pos</th><th>Truck</th><th>Driver</th><th>Points</th></tr></thead>
@@ -260,6 +260,7 @@
     <div class="result-tabs">
       <button class="rtab active" data-race="sf250">San Felipe 250</button>
       <button class="rtab" data-race="b500">Baja 500</button>
+      <button class="rtab" data-race="b400">Baja 400</button>
     </div>
     <div class="table-scroll">
       <table class="data-table" id="resultsTable">

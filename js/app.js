@@ -103,29 +103,65 @@ var RESULTS = {
     ],
     dnf: ["EJ Herbst", "Isidro Ochoa", "Jose David Ruvalcaba", "Stephen Beal",
       "Ray Griffith", "Jorge Sampietro", "Eliott Watson", "Pierce Herbst"]
+  },
+  b400: {
+    label: "7th SCORE Baja 400 — September 12, 2026 (provisional, after penalties; * = corrected time)",
+    rows: [
+      [1, "273", "Apdaly Lopez", "9:20:22.025*"],
+      [2, "236", "Mike Marsal", "9:21:13.622*"],
+      [3, "285", "Justin Davis", "9:23:50.532"],
+      [4, "282", "Brent Fox", "9:28:31.179*"],
+      [5, "219", "Pierce Herbst", "9:42:46.092"],
+      [6, "263", "EJ Herbst", "9:43:40.285"],
+      [7, "212", "Travis PeCoy", "9:47:13.983*"],
+      [8, "237", "Patrick Wieland", "10:12:32.208*"],
+      [9, "299", "Charles Dorrance", "10:24:30.389*"],
+      [10, "228", "Ryan Hancock", "10:32:17.300*"],
+      [11, "230", "Neal Drickey", "10:33:45.610*"],
+      [12, "253", "Johnny Dominguez", "10:34:32.629*"],
+      [13, "275", "Luis Angel Huerta", "10:40:23.025*"],
+      [14, "215", "Trey Gibbs", "10:44:29.485*"],
+      [15, "291", "Johnny Gould", "11:10:35.115"],
+      [16, "259", "Matt Winslow", "11:28:49.180*"],
+      [17, "242", "Bryce Swaim", "11:37:00.259"],
+      [18, "241", "Stephen Beal", "12:45:02.424*"],
+      [19, "231", "Carlos Ramos Murillo", "12:57:58.084*"],
+      [20, "262", "John Manninger", "13:50:08.182*"],
+      [21, "278", "Isaac Mercado Zendejas", "14:07:47.208*"],
+      [22, "221", "Sergio Rangel", "15:03:34.338*"]
+    ],
+    dnf: ["Jose David Ruvalcaba Adame (over time limit)", "Jimmy Diaz", "Manlio F. Diaz",
+      "Vincent Munoz", "Johannes Stengel", "Dan Bonnor", "Jake Velasco"]
   }
 };
 
-// Official SCORE points through Round 2 (Baja 500), Trophy Truck Spec.
+// Trophy Truck Spec points through Round 3. Rounds 1–2 official SCORE;
+// Round 3 (Baja 400, 29 starters) computed from provisional results with
+// SCORE's placement formula (1st=S+10, 2nd=S+4, 3rd=S, 4th=S-3, 5th=S-5,
+// then S-n; DNF = start points only) using ESTIMATED 40 start / 50 finish.
 var DEFAULT_STANDINGS = [
-  ["282", "Brent Fox", 244], ["215", "Trey Gibbs", 243], ["285", "Justin Davis", 238],
-  ["242", "Bryce Swaim", 236], ["212", "Travis PeCoy", 234], ["236", "Michael Marsal", 230],
-  ["237", "Patrick Wieland", 221], ["299", "Charles Dorrance", 218], ["270", "Jimmy Diaz", 218],
-  ["273", "Apdaly Lopez", 217], ["230", "Neal Drickey", 212], ["275", "Luis Angel Huerta", 207],
-  ["297", "Jorge Sampietro", 172], ["253", "Ray Griffith", 166], ["227", "Jack Olliges", 155],
-  ["219", "Pierce Herbst", 154], ["241", "Stephen Beal", 153], ["263", "EJ Herbst", 148],
-  ["228", "Ryan Hancock", 147], ["220", "Boris Said Jr", 114], ["223", "Kyle Murray", 113],
-  ["281", "Sergio Rangel", 109], ["268", "Doug Dillard", 108], ["280", "Justin Montesalvo", 105],
-  ["247", "Dan Bonnor", 104], ["294", "Vincent Munoz", 98], ["267", "Jose Leon", 96],
-  ["257", "Alfred Fisher", 95], ["246", "Ben Hagle", 94], ["284", "Jose Antonio Contreras", 93],
-  ["209", "Jose Ruvalcaba Adame", 80], ["233", "Eliott Watson", 80], ["290", "Isidro Ochoa", 80],
+  ["282", "Brent Fox", 360], ["285", "Justin Davis", 357], ["236", "Michael Marsal", 353],
+  ["215", "Trey Gibbs", 348], ["273", "Apdaly Lopez", 346], ["212", "Travis PeCoy", 346],
+  ["242", "Bryce Swaim", 338], ["237", "Patrick Wieland", 332], ["299", "Charles Dorrance", 328],
+  ["230", "Neal Drickey", 320], ["275", "Luis Angel Huerta", 313], ["219", "Pierce Herbst", 268],
+  ["263", "EJ Herbst", 261], ["270", "Jimmy Diaz", 258], ["228", "Ryan Hancock", 256],
+  ["241", "Stephen Beal", 254], ["221", "Sergio Rangel", 206], ["297", "Jorge Sampietro", 172],
+  ["253", "Ray Griffith", 166], ["227", "Jack Olliges", 155], ["223", "Dan Bonnor", 144],
+  ["294", "Vincent Munoz", 138], ["209", "Jose Ruvalcaba Adame", 120], ["220", "Boris Said Jr", 114],
+  ["223", "Kyle Murray", 113], ["268", "Doug Dillard", 108], ["253", "Johnny Dominguez", 107],
+  ["280", "Justin Montesalvo", 105], ["291", "Johnny Gould", 104], ["259", "Matt Winslow", 103],
+  ["231", "Carlos Ramos Murillo", 100], ["262", "John Manninger", 99], ["278", "Isaac Mercado Zendejas", 98],
+  ["267", "Jose Leon", 96], ["257", "Alfred Fisher", 95], ["246", "Ben Hagle", 94],
+  ["284", "Jose Antonio Contreras", 93], ["233", "Eliott Watson", 80], ["290", "Isidro Ochoa", 80],
+  ["269", "Manlio F. Diaz", 40], ["293", "Johannes Stengel", 40], ["238", "Jake Velasco", 40],
   ["205", "Joe Delucie", 35], ["210", "Kolton Hustead", 35], ["213", "Victor Calderon", 35],
   ["229", "Jose Mendez", 35], ["234", "Jason McNeil", 35], ["245", "Ethan Hagle", 35],
   ["248", "Miles Wyatt", 35]
 ].map(function (d, i) { return { pos: i + 1, truck: d[0], driver: d[1], points: d[2] }; });
 
-// 4-wheel green flag: Sat Sep 12, 2026, 10:00 AM PT (per official course map).
-var NEXT_RACE_TS = new Date("2026-09-12T10:00:00-07:00").getTime();
+// Baja 1000 green flag not yet published — counting down to race Saturday
+// of Baja 1000 week (Nov 14, 2026); update when SCORE posts the schedule.
+var NEXT_RACE_TS = new Date("2026-11-14T06:00:00-08:00").getTime();
 
 // Official course distances (pro classes), used for fuel projections.
 var RACE_DISTANCE = { baja400: 423.16, baja1000: null, practice: null };
