@@ -164,7 +164,7 @@ var DEFAULT_STANDINGS = [
 var NEXT_RACE_TS = new Date("2026-11-14T06:00:00-08:00").getTime();
 
 // Official course distances (pro classes), used for fuel projections.
-var RACE_DISTANCE = { baja400: 423.16, baja1000: null, practice: null };
+var RACE_DISTANCE = { baja400: 423.16, baja1000: 964.66, practice: null };
 
 /* ---------------- tiny helpers ---------------- */
 
