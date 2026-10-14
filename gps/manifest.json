@@ -1,5 +1,12 @@
 [
   {
+    "group": "Baja 1000 Course",
+    "file": "26B1K-RACE-0923.kml",
+    "name": "Baja 1000 Race Course (KML)",
+    "desc": "SCORE official race course, released Sep 23. 964.66-mi loop from San José del Cabo in 11 segments, 193 race-mile markers (every 5 mi), 4 checkpoints, 11 ambulance/rescue stations, Los Cabos route notes.",
+    "size": "2.7 MB"
+  },
+  {
     "group": "Baja 400 Course",
     "file": "26B4H-PRERUN-PROC-0827.kml",
     "name": "Baja 400 Pre-Run Course (KML)",

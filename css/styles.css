@@ -256,6 +256,7 @@ input::placeholder { color: var(--gray-dark); }
   font-weight: 700; font-size: 0.7rem; padding: 1px 6px;
 }
 .rm-label::before { display: none; }
+.tip-desc { font-weight: 400; font-size: 0.72rem; color: var(--gray); }
 .device-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .dev-row {
   display: flex; align-items: center; gap: 8px;

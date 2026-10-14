@@ -480,79 +480,102 @@ function initMap() {
   lmap = L.map("liveMap", { layers: [streets] }).setView([31.4, -116.2], 8);
   lmap.attributionControl.setPrefix(false);
   window._pchMap = lmap; // console access for field debugging
-  loadCourseOverlay({ "Streets": streets, "Satellite": sat });
+  lmBaseLayers = { "Streets": streets, "Satellite": sat };
+  loadCourseOverlay($("mapCourseSelect").value);
+  $("mapCourseSelect").addEventListener("change", function () { loadCourseOverlay(this.value); });
   Store.watchDoc("livemap", renderDevices);
   setInterval(function () { if (lmap) renderDeviceList(); }, 30000); // keep ages fresh
 }
 
-/* ----- course overlay parsed from the official SCORE KML ----- */
-function loadCourseOverlay(baseLayers) {
-  fetch("gps/26B4H-PRERUN-PROC-0827.kml")
+/* ----- course overlay parsed from the official SCORE KMLs -----
+   SCORE's files differ in folder layout (the 400 put lines in RACE and
+   points in RCML/DNGR/SPZN/PRUN; the 1000 is a Google Earth export with
+   Waypoints/CKPT/PAN DE SEGURIDAD), so classify by placemark NAME instead:
+   every LineString is course, points bucket by what they're called. */
+var COURSE_FILES = {
+  baja1000: "gps/26B1K-RACE-0923.kml",
+  baja400: "gps/26B4H-PRERUN-PROC-0827.kml"
+};
+var lmBaseLayers = null, lmOverlayGroups = [], lmLayerControl = null, lmZoomHandler = null;
+
+function loadCourseOverlay(raceKey) {
+  var file = COURSE_FILES[raceKey] || COURSE_FILES.baja1000;
+  // tear down the previous course
+  lmOverlayGroups.forEach(function (g) { lmap.removeLayer(g); });
+  lmOverlayGroups = [];
+  if (lmLayerControl) { lmap.removeControl(lmLayerControl); lmLayerControl = null; }
+  if (lmZoomHandler) { lmap.off("zoomend", lmZoomHandler); lmZoomHandler = null; }
+  lmCourseBounds = null;
+
+  fetch(file)
     .then(function (r) { return r.text(); })
     .then(function (txt) {
       var xml = new DOMParser().parseFromString(txt, "text/xml");
       var canvas = L.canvas({ padding: 0.3 });
 
-      function folderByName(want) {
-        var folders = xml.getElementsByTagName("Folder");
-        for (var i = 0; i < folders.length; i++) {
-          for (var c = 0; c < folders[i].childNodes.length; c++) {
-            var n = folders[i].childNodes[c];
-            if (n.nodeName === "name" && n.textContent.trim() === want) return folders[i];
-          }
-        }
-        return null;
-      }
       function coordPairs(text) {
         return text.trim().split(/\s+/).map(function (t) {
           var p = t.split(",");
           return [parseFloat(p[1]), parseFloat(p[0])]; // KML is lon,lat
         }).filter(function (ll) { return isFinite(ll[0]) && isFinite(ll[1]); });
       }
-      function pointLayer(folderName, color, radius) {
-        var group = L.layerGroup();
-        var f = folderByName(folderName);
-        if (!f) return group;
-        var pms = f.getElementsByTagName("Placemark");
-        for (var i = 0; i < pms.length; i++) {
-          var nameEl = pms[i].getElementsByTagName("name")[0];
-          var coordEl = pms[i].getElementsByTagName("coordinates")[0];
-          if (!coordEl) continue;
-          var ll = coordPairs(coordEl.textContent)[0];
-          if (!ll) continue;
-          var mk = L.circleMarker(ll, { renderer: canvas, radius: radius, color: color, weight: 2, fillColor: color, fillOpacity: 0.7 });
-          mk._pchName = nameEl ? nameEl.textContent.trim() : "";
-          mk.bindTooltip(mk._pchName, { direction: "top" });
-          mk.addTo(group);
-        }
-        return group;
-      }
+      function mkGroup(color, radius) { var g = L.layerGroup(); g._pchStyle = { color: color, radius: radius }; return g; }
 
-      // course lines (segments S1–S5 live in the RACE folder)
       var course = L.layerGroup();
-      var raceFolder = folderByName("RACE");
+      var rm = mkGroup("#f4f7fa", 4), check = mkGroup("#cdea1d", 6), danger = mkGroup("#ff4444", 5),
+          sz = mkGroup("#ffd54d", 4), medical = mkGroup("#ff6b9d", 5), prerun = mkGroup("#4dd2ff", 4),
+          notes = mkGroup("#9aa5b1", 4);
       var allPts = [];
-      if (raceFolder) {
-        var lines = raceFolder.getElementsByTagName("LineString");
-        for (var i = 0; i < lines.length; i++) {
-          var coordEl = lines[i].getElementsByTagName("coordinates")[0];
-          if (!coordEl) continue;
-          var pts = coordPairs(coordEl.textContent);
-          allPts = allPts.concat(pts);
-          L.polyline(pts, { renderer: canvas, color: "#e5262d", weight: 3, opacity: 0.9 }).addTo(course);
-        }
-      }
-      var rm = pointLayer("RCML", "#f4f7fa", 4);
-      var danger = pointLayer("DNGR", "#ff4444", 5);
-      var sz = pointLayer("SPZN", "#ffd54d", 4);
-      var prerun = pointLayer("PRUN", "#4dd2ff", 4);
 
-      course.addTo(lmap);
-      rm.addTo(lmap);
+      // every LineString anywhere in the file = course
+      var lines = xml.getElementsByTagName("LineString");
+      for (var i = 0; i < lines.length; i++) {
+        var coordEl = lines[i].getElementsByTagName("coordinates")[0];
+        if (!coordEl) continue;
+        var pts = coordPairs(coordEl.textContent);
+        allPts = allPts.concat(pts);
+        L.polyline(pts, { renderer: canvas, color: "#e5262d", weight: 3, opacity: 0.9 }).addTo(course);
+      }
+
+      // points, bucketed by name
+      var pms = xml.getElementsByTagName("Placemark");
+      for (var p = 0; p < pms.length; p++) {
+        var pt = pms[p].getElementsByTagName("Point")[0];
+        if (!pt) continue;
+        var cEl = pt.getElementsByTagName("coordinates")[0];
+        if (!cEl) continue;
+        var ll = coordPairs(cEl.textContent)[0];
+        if (!ll) continue;
+        var nameEl = pms[p].getElementsByTagName("name")[0];
+        var name = nameEl ? nameEl.textContent.trim().split("\n")[0].trim() : "";
+        var descEl = pms[p].getElementsByTagName("description")[0];
+        var desc = descEl ? descEl.textContent.trim() : "";
+        var g;
+        if (/^RM\s*\d+/i.test(name)) g = rm;
+        else if (/^VCP/i.test(name)) continue;               // virtual checkpoints: too dense to draw
+        else if (/\bSZ\s*\d|SPEED|SPTM/i.test(name)) g = sz;   // before CHECK: "CHECK 1-SPTM CUT" is a speed-zone timing point
+        else if (/^CHECK\s*\d|^CHCK|^End\b/i.test(name)) g = check;
+        else if (/DANGER|PELIGRO/i.test(name)) g = danger;
+        else if (/AMBULANCIA|RESCATE|MEDIC|RESCUE/i.test(name)) g = medical;
+        else if (/^STOP\s*\d|PRE-?RUN/i.test(name)) g = prerun;
+        else g = notes;
+        var st = g._pchStyle;
+        var mk = L.circleMarker(ll, { renderer: canvas, radius: st.radius, color: st.color, weight: 2, fillColor: st.color, fillOpacity: 0.75 });
+        mk._pchName = name;
+        mk.bindTooltip(name + (desc ? "<br><span class='tip-desc'>" + esc(desc).replace(/\n/g, "<br>") + "</span>" : ""), { direction: "top" });
+        mk.addTo(g);
+      }
+
+      course.addTo(lmap); rm.addTo(lmap); check.addTo(lmap);
+      var overlays = { "Race course": course, "Race miles": rm };
+      var optional = [["Checkpoints", check], ["Dangers", danger], ["Speed zones", sz],
+                      ["Medical / rescue", medical], ["Pre-run stops", prerun], ["Notes & landmarks", notes]];
+      optional.forEach(function (o) { if (o[1].getLayers().length) overlays[o[0]] = o[1]; });
+      lmOverlayGroups = [course].concat(Object.keys(overlays).map(function (k) { return overlays[k]; }));
 
       // race-mile labels switch on when zoomed in enough to read them
       var rmLabeled = null;
-      function updateRmLabels() {
+      lmZoomHandler = function () {
         var permanent = lmap.getZoom() >= 10;
         if (permanent === rmLabeled) return;
         rmLabeled = permanent;
@@ -562,22 +585,20 @@ function loadCourseOverlay(baseLayers) {
             ? { permanent: true, direction: "right", offset: [7, 0], className: "rm-label" }
             : { direction: "top" });
         });
-      }
-      lmap.on("zoomend", updateRmLabels);
-      updateRmLabels();
-      L.control.layers(baseLayers, {
-        "Race course": course, "Race miles": rm, "Dangers": danger,
-        "Speed zones": sz, "Pre-run stops": prerun
-      }, { collapsed: true }).addTo(lmap);
+      };
+      lmap.on("zoomend", lmZoomHandler);
+      lmZoomHandler();
+      lmLayerControl = L.control.layers(lmBaseLayers, overlays, { collapsed: true }).addTo(lmap);
 
       if (allPts.length) {
         lmCourseBounds = L.latLngBounds(allPts);
         lmap.fitBounds(lmCourseBounds, { padding: [20, 20] });
       }
-      console.log("course overlay: " + (raceFolder ? raceFolder.getElementsByTagName("LineString").length : 0) +
-        " segments, " + allPts.length + " track pts, RM " + rm.getLayers().length +
+      console.log("course overlay [" + raceKey + "]: " + lines.length + " segments, " + allPts.length +
+        " track pts, RM " + rm.getLayers().length + ", checkpoints " + check.getLayers().length +
         ", danger " + danger.getLayers().length + ", SZ " + sz.getLayers().length +
-        ", pre-run " + prerun.getLayers().length);
+        ", medical " + medical.getLayers().length + ", pre-run " + prerun.getLayers().length +
+        ", notes " + notes.getLayers().length);
     })
     .catch(function (e) { console.warn("course overlay failed", e); });
 }
