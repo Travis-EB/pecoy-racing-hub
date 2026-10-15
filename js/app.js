@@ -827,6 +827,7 @@ function renderPf() {
   renderPitCards(s);
   renderProjection(s);
   renderFob();
+  pcPrefill(false); // keep the pit calculator's R/S in step with the log unless the user typed their own
 }
 
 /* ----- one card per pit, with a fuel drilldown inside ----- */
@@ -981,6 +982,60 @@ function renderProjection(s) {
       : "") + "</span>";
 }
 $("courseSz").addEventListener("input", function () { renderProjection(fuelStats()); });
+
+/* ----- fuel pit calculator: gallons the truck will take at a fill-to-full pit
+   gallons = (leg − SZ)/R + SZ/S, with R and S prefilled from the solver ----- */
+var pcTouched = { pcR: false, pcS: false };
+
+function pcPrefill(force) {
+  var s = fuelStats();
+  var have = s.splitStatus === "ok";
+  var blended = isFinite(s.avgMpg) && s.avgMpg > 0 ? s.avgMpg : NaN;
+  var manual = parseFloat($("fobMpg").value);
+  var fallback = isFinite(blended) ? blended : (isFinite(manual) && manual > 0 ? manual : NaN);
+  if (force || !pcTouched.pcR) $("pcR").value = have ? s.racePace.toFixed(2) : (isFinite(fallback) ? fallback.toFixed(2) : "");
+  if (force || !pcTouched.pcS) $("pcS").value = have ? s.szPace.toFixed(2) : (isFinite(fallback) ? fallback.toFixed(2) : "");
+  if (force) { pcTouched.pcR = false; pcTouched.pcS = false; }
+  $("pcR").placeholder = have ? "solver" : "no split yet";
+  $("pcS").placeholder = have ? "solver" : "no split yet";
+  renderPitCalc();
+}
+
+function renderPitCalc() {
+  var leg = parseFloat($("pcLeg").value), sz = parseFloat($("pcSz").value);
+  var R = parseFloat($("pcR").value), S = parseFloat($("pcS").value);
+  var tol = Math.max(0, parseFloat($("pcTol").value) || 0) / 100;
+  var out = $("pcOut");
+  if (!isFinite(sz) || sz < 0) sz = 0;
+  if (!isFinite(leg) || leg <= 0) { out.innerHTML = "Enter the leg miles to get a number."; return; }
+  if (sz > leg) { out.innerHTML = '<strong class="warn-txt">Speed-zone miles can’t exceed the leg.</strong> Enter the whole leg distance (SZ included), then the SZ miles within it.'; return; }
+  if (!(R > 0)) { out.innerHTML = "Need a race-pace mi/gal — log a pit for this race, set an assumed mi/gal in Fuel On Board, or type R here."; return; }
+  if (!(S > 0)) S = R; // no SZ rate known: treat SZ miles like race miles (conservative)
+
+  var race = leg - sz;
+  var gal = race / R + sz / S;
+  var galLow = race / (R * (1 + tol)) + sz / (S * (1 + tol));   // rates better than expected
+  var galHigh = race / (R * (1 - tol)) + sz / (S * (1 - tol));  // rates worse than expected
+  var plusMinus = Math.max(gal - galLow, galHigh - gal);
+  var legMpg = leg / gal;
+  var margin = FUEL_CELL_GALLONS - galHigh;
+  var cls = galHigh > FUEL_CELL_GALLONS ? "warn-txt" : "";
+
+  out.innerHTML =
+    "Plan on the truck taking <strong>" + fmt(gal, 1) + " gal</strong> &plusmn; " + fmt(plusMinus, 1) +
+    " &nbsp;<span class='muted'>(" + fmt(galLow, 1) + " – " + fmt(galHigh, 1) + " gal at &plusmn;" + Math.round(tol * 100) + "% on the rates)</span><br>" +
+    "<span class='muted'>" + fmt(race, 1) + " race mi @ " + fmt(R) + " = " + fmt(race / R, 1) + " gal &nbsp;+&nbsp; " +
+    fmt(sz, 1) + " SZ mi @ " + fmt(S) + " = " + fmt(sz / S, 1) + " gal &nbsp;→&nbsp; leg average <strong>" + fmt(legMpg) + " mi/gal</strong></span><br>" +
+    (galHigh > FUEL_CELL_GALLONS
+      ? '<strong class="warn-txt">⚠ Worst case ' + fmt(galHigh, 1) + " gal exceeds the 89-gal cell" +
+        (gal > FUEL_CELL_GALLONS ? " — even the expected burn doesn’t fit. Shorten this leg." : " — this leg only works if the rates hold. Consider a splash.") + "</strong>"
+      : "Worst case leaves <strong class='" + cls + "'>" + fmt(margin, 1) + " gal</strong> in the cell on arrival.");
+}
+["pcLeg", "pcSz", "pcTol"].forEach(function (id) { $(id).addEventListener("input", renderPitCalc); });
+["pcR", "pcS"].forEach(function (id) {
+  $(id).addEventListener("input", function () { pcTouched[id] = true; renderPitCalc(); });
+});
+$("pcFromLog").addEventListener("click", function () { pcPrefill(true); });
 
 /* ----- add / watch / migrate ----- */
 $("pitAddRow").addEventListener("click", function () {

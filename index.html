@@ -169,6 +169,21 @@
     <div class="projection" id="fuelProjection"></div>
   </div>
 
+  <div class="card">
+    <div class="card-label">Fuel Pit Calculator &mdash; how much will the truck take?</div>
+    <p class="muted">Every pit fills to full, so the gallons the truck takes = the gallons it burned since the last fill. Enter the leg as a whole &mdash; <strong>do not subtract the speed-zone miles yourself</strong>; the calculator splits them out.</p>
+    <div class="fuel-entry">
+      <div class="field"><label>Leg miles &mdash; total <span class="opt">(SZ miles included)</span></label><input type="number" id="pcLeg" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 195"></div>
+      <div class="field"><label>Speed-zone miles in that leg</label><input type="number" id="pcSz" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 40"></div>
+      <div class="field"><label>Race-pace mi/gal <span class="opt">(R)</span></label><input type="number" id="pcR" inputmode="decimal" min="0.5" step="0.05" placeholder="from log"></div>
+      <div class="field"><label>Speed-zone mi/gal <span class="opt">(S)</span></label><input type="number" id="pcS" inputmode="decimal" min="0.5" step="0.05" placeholder="from log"></div>
+      <div class="field"><label>Rate uncertainty &plusmn;%</label><input type="number" id="pcTol" inputmode="decimal" min="0" max="50" step="1" value="10"></div>
+      <button class="btn btn-ghost btn-small" id="pcFromLog" title="Pull R and S from the logged pits for this race">&#8635; from log</button>
+    </div>
+    <div class="projection" id="pcOut"></div>
+    <p class="muted" id="pcFormula">gallons = (leg &minus; SZ) &divide; R &nbsp;+&nbsp; SZ &divide; S &nbsp;&middot;&nbsp; leg mi/gal = leg &divide; gallons</p>
+  </div>
+
   <div id="pitCards"></div>
   <div class="link-row" style="margin-bottom:14px"><button class="btn" id="pitAddRow">+ Add Pit</button></div>
 
